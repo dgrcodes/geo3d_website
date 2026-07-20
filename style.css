@@ -1,0 +1,141 @@
+:root {
+    /* Solid Earth Tones */
+    --cube-wire-color: #3d2b1f; 
+    --cube-corner-color: #ffffff; 
+
+    /* Remove the 'glow' effect by using a duller color */
+    --cube-rim-color: #5c4033; 
+
+    /* Geological Strata */
+    --cube-band-0: #2d1b12; /* Deepest bedrock */
+    --cube-band-1: #4a3728; 
+    --cube-band-2: #6b503d; 
+    --cube-band-3: #8b6e56; 
+    --cube-band-4: #a0846e; 
+    --cube-band-5: #bda28b; /* Topsoil */
+
+    --cube-top-color: #556b2f; /* Moss/Surface */
+    --cube-bottom-color: #2d1b12;
+
+    /* Optional per-face rim glow override -- if left unset, top/bottom fall
+       back to --cube-rim-color above. */
+    --cube-top-rim-color: #556b2f;
+    --cube-bottom-rim-color: #2d1b12;
+
+    /* Interaction colors */
+    --cube-hover-color: #8b5a2b;
+    --cube-click-color: #5c4033;
+    /* Ripple burst on hover -- the ring's color cycles between these two as
+       it expands. Not the always-on flowing line pattern (not configurable
+       via CSS var, see FACE_FRAGMENT_SHADER in threejs.js). */
+    --cube-ripple-color-a: #2b6d8b;
+    --cube-ripple-color-b: #a0846e;
+
+    --nav-line-color: #3d2b1f;
+    --nav-label-color: #3d2b1f;
+    --nav-label-hover-color: #8b5a2b;
+
+    /* Background dot grid -- one uniform grid (all dots same size/spacing),
+       drawn as a small repeating tile with each dot's opacity randomized so
+       some read as fainter than others. See buildDotGridTexture() in
+       threejs.js for size/spacing/opacity-range/randomization -- this color
+       var is the only part of the look that lives here. Plain hex, no alpha
+       needed (opacity is randomized per-dot in JS instead). */
+    --bg-dot-color: #bb957b;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    height: 100%;
+    background-color: #d3dada;
+    font-family: arial, sans-serif;
+}
+
+/* Parallax-shifted dot grid, positioned/animated from threejs.js (translated
+   via JS on mousemove relative to the cube). background-image is a repeating
+   canvas-generated tile set from JS (see buildDotGridTexture()) -- that's
+   where each dot's randomized opacity comes from. */
+.bg-dots {
+    position: fixed;
+    inset: -10%; /* overscan so the parallax shift never reveals a hard edge */
+    pointer-events: none;
+    background-repeat: repeat;
+    /* No z-index here on purpose -- negative z-index has cross-browser quirks
+       with sitting behind the page's own background in some engines. This
+       div is created/inserted before the canvas in threejs.js, and plain
+       DOM order alone is enough to keep it underneath it. */
+}
+
+canvas {
+    display: block;
+}
+
+/* Cube nav labels (the "le projet" / "jouer" / "données" links floating next
+   to the cube). Position (top/left/right) is set per-item from CONFIG.nav in
+   threejs.js -- everything else about their look/spacing goes here. */
+.cube-nav-label {
+    pointer-events: auto;
+    font-family: sans-serif;
+    font-weight: 600;
+    font-size: 1.1rem;
+    text-decoration: none;
+    letter-spacing: 0.03em;
+    text-transform: lowercase;
+    padding: 0.4em 0.8em;
+    transition: color 0.2s ease;
+}
+
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 5rem;
+    font-weight: bolder;
+}
+
+.nav-links {
+    display: flex;
+    align-items: center; /* This keeps icons and text aligned */
+    gap: 20px;
+}
+
+/* Optional: ensure icons have a consistent look */
+.nav-links a {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    color: var(--nav-label-color);
+}
+
+/* "Site under construction" placeholder used by jouer/donnees/le-projet
+   pages -- keeps the header/nav but replaces the page content with this
+   centered message until those pages are actually built out. */
+.dev-message {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 6rem);
+    text-align: center;
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: var(--nav-label-color);
+    letter-spacing: 0.02em;
+}
+
+.dev-message .dots span {
+    display: inline-block;
+    opacity: 0;
+    animation: dev-dot-fade 1.4s infinite;
+}
+.dev-message .dots span:nth-child(1) { animation-delay: 0s; }
+.dev-message .dots span:nth-child(2) { animation-delay: 0.2s; }
+.dev-message .dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes dev-dot-fade {
+    0%, 20% { opacity: 0; }
+    50% { opacity: 1; }
+    100% { opacity: 0; }
+}
