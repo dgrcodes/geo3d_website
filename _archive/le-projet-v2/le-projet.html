@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="fr" class="project-page">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Le Projet — GEO3D</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="./assets/scripts/le-projet.css">
+</head>
+<body class="project-page">
+    <!-- ============== DÉBUT HEADER ============== -->
+<header>
+    <nav class="navbar">
+        <div class="logo">
+            <a href="./index.html" style="color: inherit; text-decoration: none;">GEO3D</a>
+        </div>
+        <div class="nav-links">
+            <!-- Email Icon (SVG) -->
+            <a href="mailto:email@example.com">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                    <polyline points="22,6 12,13 2,6"></polyline>
+                </svg>
+            </a>
+
+            <!-- YouTube Icon (SVG) -->
+            <a href="https://youtube.com">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.42a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.42 8.6.42 8.6.42s6.88 0 8.6-.42a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.33 29 29 0 0 0-.46-5.33z"></path>
+                    <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"></polygon>
+                </svg>
+            </a>
+        </div>
+    </nav>
+</header>
+    <!-- ============== FIN HEADER ============== -->
+
+    <!-- ============== DÉBUT MAIN ============== -->
+    <main>
+        <!-- HERO -->
+        <section class="proj-hero reveal">
+            <div class="proj-hero-text">
+                <div class="proj-eyebrow" data-parallax="0.06"><span class="dot"></span>geo3d — dossier 01</div>
+                <h1 class="proj-title" data-parallax="0.18"><span data-echo="Le Projet">Le Projet</span></h1>
+                <p class="proj-lede" data-parallax="0.1">
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. GEO3D reconstitue
+                    des coupes stratigraphiques en trois dimensions pour rendre lisible ce qui,
+                    sur le terrain, reste enfoui sous la surface.
+                </p>
+                <div class="proj-scroll-cue"><span></span>scroller</div>
+            </div>
+
+            <!-- Wireframe globe -- flat SVG lat/long grid, auto-spin (CSS) +
+                 pointer-driven tilt (le-projet.js). -->
+            <div class="globe-wrap" aria-hidden="true">
+                <div class="globe-tilt">
+                    <div class="globe-spin">
+                        <svg class="globe-svg" viewBox="0 0 200 200">
+                            <circle cx="100" cy="100" r="70"></circle>
+                            <ellipse cx="100" cy="100" rx="70" ry="55"></ellipse>
+                            <ellipse cx="100" cy="100" rx="70" ry="36"></ellipse>
+                            <ellipse cx="100" cy="100" rx="70" ry="18"></ellipse>
+                            <ellipse cx="100" cy="100" rx="55" ry="70"></ellipse>
+                            <ellipse cx="100" cy="100" rx="36" ry="70"></ellipse>
+                            <ellipse cx="100" cy="100" rx="18" ry="70"></ellipse>
+                            <circle class="globe-core" cx="100" cy="100" r="3"></circle>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- COUPE STRATIGRAPHIQUE -->
+        <section class="proj-section proj-strata reveal" id="stratigraphie">
+            <header class="proj-section-head" data-index="02">
+                <span class="tag-chip">02 / lecture</span>
+                <h2>Coupe stratigraphique</h2>
+                <p>
+                    Lorem ipsum dolor sit amet consectetur adipiscing elit, sed do eiusmod
+                    tempor incididunt ut labore. Survolez une couche ou une note pour lier
+                    les deux — même logique que le cube de l'accueil.
+                </p>
+            </header>
+
+            <div class="strata-body">
+                <div class="strata-diagram" aria-hidden="true" data-parallax="-0.08">
+                    <div class="strata-band" data-band="5" style="--band-color: var(--cube-top-color)"><span class="band-dot"></span></div>
+                    <div class="strata-band" data-band="4" style="--band-color: var(--cube-band-4)"><span class="band-dot"></span></div>
+                    <div class="strata-band" data-band="3" style="--band-color: var(--cube-band-3)"><span class="band-dot"></span></div>
+                    <div class="strata-band" data-band="2" style="--band-color: var(--cube-band-2)"><span class="band-dot"></span></div>
+                    <div class="strata-band" data-band="1" style="--band-color: var(--cube-band-1)"><span class="band-dot"></span></div>
+                    <div class="strata-band" data-band="0" style="--band-color: var(--cube-band-0)"><span class="band-dot"></span></div>
+                </div>
+
+                <ul class="strata-annotations">
+                    <li data-band="5">
+                        <span class="strata-index">05</span>
+                        <div>
+                            <h3>Couverture végétale</h3>
+                            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit sed do eiusmod.</p>
+                        </div>
+                    </li>
+                    <li data-band="4">
+                        <span class="strata-index">04</span>
+                        <div>
+                            <h3>Horizon superficiel</h3>
+                            <p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.</p>
+                        </div>
+                    </li>
+                    <li data-band="3">
+                        <span class="strata-index">03</span>
+                        <div>
+                            <h3>Dépôt sédimentaire</h3>
+                            <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum.</p>
+                        </div>
+                    </li>
+                    <li data-band="2">
+                        <span class="strata-index">02</span>
+                        <div>
+                            <h3>Roche altérée</h3>
+                            <p>Excepteur sint occaecat cupidatat non proident, sunt in culpa qui.</p>
+                        </div>
+                    </li>
+                    <li data-band="1">
+                        <span class="strata-index">01</span>
+                        <div>
+                            <h3>Substrat rocheux</h3>
+                            <p>Sed ut perspiciatis unde omnis iste natus error sit voluptatem.</p>
+                        </div>
+                    </li>
+                    <li data-band="0">
+                        <span class="strata-index">00</span>
+                        <div>
+                            <h3>Socle profond</h3>
+                            <p>Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet.</p>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- PILIERS -->
+        <section class="proj-section proj-pillars reveal">
+            <header class="proj-section-head" data-index="03">
+                <span class="tag-chip">03 / piliers</span>
+                <h2>Ce que couvre le projet</h2>
+                <p>Lorem ipsum dolor sit amet consectetur adipiscing elit, sed do eiusmod tempor.</p>
+            </header>
+
+            <div class="pillars-grid">
+                <article class="pillar-card">
+                    <span class="pillar-index">01</span>
+                    <span class="tag-chip tag-chip--accent">terrain</span>
+                    <h3>Acquisition de terrain</h3>
+                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit sed do eiusmod tempor incididunt.</p>
+                </article>
+                <article class="pillar-card">
+                    <span class="pillar-index">02</span>
+                    <span class="tag-chip tag-chip--accent">modèle</span>
+                    <h3>Reconstruction 3D</h3>
+                    <p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip.</p>
+                </article>
+                <article class="pillar-card">
+                    <span class="pillar-index">03</span>
+                    <span class="tag-chip tag-chip--accent">données</span>
+                    <h3>Analyse des données</h3>
+                    <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu.</p>
+                </article>
+                <article class="pillar-card">
+                    <span class="pillar-index">04</span>
+                    <span class="tag-chip tag-chip--accent">lab</span>
+                    <h3>Simulation interactive</h3>
+                    <p>Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt.</p>
+                </article>
+            </div>
+        </section>
+
+        <!-- MANIFESTE -->
+        <section class="proj-section proj-manifesto reveal">
+            <header class="proj-section-head" data-index="04">
+                <span class="tag-chip">04 / intention</span>
+                <h2>Pourquoi GEO3D</h2>
+            </header>
+            <p class="manifesto-text">
+                Lorem ipsum dolor sit amet
+                <span class="annotate" data-note="Modèle numérique de terrain généré à partir de relevés réels.">consectetur adipiscing</span>
+                elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim
+                ad minim veniam, quis nostrud
+                <span class="annotate" data-note="Traitement automatisé des séries de mesures collectées sur site.">exercitation ullamco</span>
+                laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in
+                <span class="annotate" data-note="Interface explorable pensée comme un laboratoire, pas un simple visualiseur.">reprehenderit in voluptate</span>
+                velit esse cillum dolore eu fugiat nulla pariatur.
+            </p>
+        </section>
+
+        <!-- CTA -->
+        <section class="proj-cta reveal">
+            <a href="./index.html" class="proj-cta-link"><span class="dot"></span>retour au cube<span class="arrow">→</span></a>
+        </section>
+    </main>
+    <!-- ============== FIN MAIN ============== -->
+
+    <!-- ============== DÉBUT FOOTER ============== -->
+    <footer>
+
+    </footer>
+    <!-- ============== FIN FOOTER ============== -->
+
+    <script src="./assets/scripts/le-projet.js"></script>
+</body>
+</html>

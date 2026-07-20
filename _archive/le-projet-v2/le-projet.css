@@ -1,0 +1,646 @@
+/* ==========================================================================
+   LE PROJET -- v2, "dossier technique" sombre : grain, constellation de
+   points, globe wireframe, halftone. Se démarque volontairement du thème
+   clair/terre de l'accueil (portée limitée à cette page, voir
+   html.project-page / body.project-page) pour se rapprocher des références
+   (Igloo Inc, Guardbase, Three Dimensions -- fond sombre, lignes fines,
+   halftone, labels techniques). Une v1 (claire, pastille) est archivée dans
+   _archive/le-projet-v1/.
+   ========================================================================== */
+
+:root {
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+    --dp-bg: #0a0b0d;
+    --dp-bg-soft: #101318;
+    --dp-text: #eceef0;
+    --dp-dim: rgba(236, 238, 240, 0.58);
+    --dp-line: rgba(236, 238, 240, 0.18);
+    --dp-line-strong: rgba(236, 238, 240, 0.4);
+    --dp-accent: #6a95ff;
+    --dp-highlight: #e7ff5b;
+}
+
+html.project-page,
+body.project-page {
+    overflow-y: auto;
+    overflow-x: hidden;
+    height: auto;
+    min-height: 100%;
+    background: var(--dp-bg);
+}
+
+body.project-page {
+    font-family: arial, sans-serif;
+}
+
+body.project-page header {
+    position: relative;
+    z-index: 3;
+}
+body.project-page .logo a,
+body.project-page .nav-links a {
+    color: var(--dp-text) !important;
+}
+
+body.project-page main {
+    display: block;
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 8rem;
+    color: var(--dp-text);
+    position: relative;
+    z-index: 2;
+}
+
+/* Grain -- inline SVG turbulence, tiled, blended over everything. Pure CSS/
+   no image asset. */
+.grain-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 4;
+    pointer-events: none;
+    opacity: 0.05;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+
+/* Constellation network -- fixed canvas, drifting nodes + connecting lines,
+   drawn/animated in le-projet.js. Sits behind the content, above the flat
+   background color. */
+.constellation {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* Cursor-follow ring -- small, low-key, purely decorative marker that trails
+   the pointer. Position set every frame in le-projet.js via translate3d. */
+.cursor-ring {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 22px;
+    height: 22px;
+    margin: -11px 0 0 -11px;
+    border: 1px solid var(--dp-accent);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 5;
+    opacity: 0.6;
+    transition: opacity 0.2s ease, transform 0.08s ease-out;
+    will-change: transform;
+}
+
+/* Scroll-reveal -- sections start slightly lowered/faded, JS adds .in-view
+   via IntersectionObserver as each scrolls in. */
+.reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+}
+.reveal.in-view {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Small recurring building blocks -------------------------------------- */
+/* Bracket-style readout label, no boxed/pill background -- brackets are
+   plain characters (::before/::after content), not a bordered box. */
+.tag-chip {
+    display: inline-flex;
+    align-items: center;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--dp-dim);
+}
+.tag-chip::before {
+    content: "[ ";
+    opacity: 0.5;
+}
+.tag-chip::after {
+    content: " ]";
+    opacity: 0.5;
+}
+.tag-chip--accent {
+    color: var(--dp-accent);
+}
+
+.dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex: none;
+}
+
+/* Hero -------------------------------------------------------------------*/
+.proj-hero {
+    min-height: 88vh;
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    align-items: center;
+    gap: 2rem;
+}
+
+.proj-hero-text {
+    display: flex;
+    flex-direction: column;
+    gap: 1.4rem;
+}
+
+.proj-eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--dp-accent);
+}
+
+.proj-title {
+    font-size: clamp(2.8rem, 7vw, 5.6rem);
+    line-height: 0.96;
+    margin: 0;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--dp-text);
+}
+/* Thin outline echo of the title, offset behind it -- cheap "double
+   exposure" effect referencing the duplicated/ghosted type in the moodboard
+   without needing an image asset. */
+.proj-title span {
+    position: relative;
+    display: inline-block;
+}
+.proj-title span::after {
+    content: attr(data-echo);
+    position: absolute;
+    left: 6px;
+    top: 6px;
+    z-index: -1;
+    color: transparent;
+    -webkit-text-stroke: 1px var(--dp-line-strong);
+}
+
+.proj-lede {
+    max-width: 46ch;
+    font-size: 1.05rem;
+    line-height: 1.6;
+    color: var(--dp-dim);
+}
+
+.proj-scroll-cue {
+    display: flex;
+    align-items: center;
+    gap: 0.6em;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--dp-dim);
+}
+.proj-scroll-cue span {
+    display: block;
+    width: 1px;
+    height: 28px;
+    background: var(--dp-line-strong);
+    animation: scroll-cue-pulse 1.6s ease-in-out infinite;
+}
+@keyframes scroll-cue-pulse {
+    0%, 100% { transform: scaleY(0.4); opacity: 0.3; }
+    50% { transform: scaleY(1); opacity: 0.9; }
+}
+
+/* Wireframe globe -- flat SVG grid of latitude/longitude ellipses, spun on
+   its Y axis continuously, with an extra tilt layer driven by the pointer
+   in le-projet.js (mimics the "follow cursor" wireframe orb reference). */
+.globe-wrap {
+    justify-self: center;
+    width: min(70vw, 320px);
+    aspect-ratio: 1;
+    perspective: 900px;
+}
+.globe-tilt {
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+    will-change: transform;
+}
+.globe-spin {
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+    animation: globe-spin-y 16s linear infinite;
+}
+@keyframes globe-spin-y {
+    from { transform: rotateY(0deg); }
+    to { transform: rotateY(360deg); }
+}
+.globe-svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+.globe-svg circle,
+.globe-svg ellipse {
+    fill: none;
+    stroke: var(--dp-line-strong);
+    stroke-width: 1;
+}
+.globe-svg .globe-core {
+    stroke: none;
+    fill: var(--dp-accent);
+    opacity: 0.9;
+}
+
+/* Shared section head ------------------------------------------------- */
+.proj-section {
+    padding: 6rem 0;
+    border-top: 1px solid var(--dp-line);
+    position: relative;
+}
+.proj-section-head {
+    max-width: 60ch;
+    margin-bottom: 2.5rem;
+    position: relative;
+}
+/* Oversized faint index number sitting behind the heading -- editorial
+   "dossier" cue, echoes the numbered annotations in the moodboard. */
+.proj-section-head::before {
+    content: attr(data-index);
+    position: absolute;
+    top: -1.6em;
+    right: 0;
+    font-family: var(--mono);
+    font-size: 5rem;
+    font-weight: 700;
+    color: var(--dp-line);
+    z-index: -1;
+    line-height: 1;
+}
+.proj-section-head h2 {
+    font-size: clamp(1.6rem, 4vw, 2.2rem);
+    margin: 0.6em 0 0.4em;
+    letter-spacing: -0.01em;
+    color: var(--dp-text);
+}
+.proj-section-head p {
+    line-height: 1.6;
+    color: var(--dp-dim);
+}
+
+/* Strata diagram --------------------------------------------------------*/
+.strata-body {
+    display: flex;
+    gap: 3rem;
+    min-height: 420px;
+}
+
+.strata-diagram {
+    flex: 0 0 220px;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--dp-line-strong);
+    overflow: hidden;
+    will-change: transform;
+}
+
+.strata-band {
+    flex: 1;
+    position: relative;
+    background:
+        radial-gradient(circle, rgba(236, 238, 240, var(--dot-a, 0.5)) 1px, transparent 1.2px)
+            0 0 / var(--dot-size, 10px) var(--dot-size, 10px),
+        var(--band-color);
+    background-blend-mode: overlay;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    opacity: 0;
+    transform: translateX(28px);
+    transition: filter 0.25s ease, flex-grow 0.25s ease,
+        opacity 0.6s ease, transform 0.6s ease;
+}
+.strata-band:first-child { border-top: none; }
+.strata-band.is-active {
+    filter: brightness(1.25) saturate(1.1);
+    flex-grow: 1.15;
+}
+/* Halftone density increases with depth -- smaller/tighter dots near the
+   bottom bands, larger/looser near the surface. */
+.strata-band:nth-child(1) { --dot-size: 5px; --dot-a: 0.7; }
+.strata-band:nth-child(2) { --dot-size: 7px; --dot-a: 0.6; }
+.strata-band:nth-child(3) { --dot-size: 9px; --dot-a: 0.5; }
+.strata-band:nth-child(4) { --dot-size: 11px; --dot-a: 0.42; }
+.strata-band:nth-child(5) { --dot-size: 13px; --dot-a: 0.36; }
+.strata-band:nth-child(6) { --dot-size: 15px; --dot-a: 0.3; }
+
+/* Cascading "deposition" entrance -- top band settles in first, each one
+   below it a beat later, once the section scrolls into view. Delay order
+   matches the transition list above: filter, flex-grow, opacity, transform
+   -- keeps hover feedback (filter/flex-grow) instant. */
+.reveal.in-view .strata-band { opacity: 1; transform: translateX(0); }
+.strata-band:nth-child(1) { transition-delay: 0s, 0s, 0s, 0s; }
+.strata-band:nth-child(2) { transition-delay: 0s, 0s, 0.08s, 0.08s; }
+.strata-band:nth-child(3) { transition-delay: 0s, 0s, 0.16s, 0.16s; }
+.strata-band:nth-child(4) { transition-delay: 0s, 0s, 0.24s, 0.24s; }
+.strata-band:nth-child(5) { transition-delay: 0s, 0s, 0.32s, 0.32s; }
+.strata-band:nth-child(6) { transition-delay: 0s, 0s, 0.4s, 0.4s; }
+
+.band-dot {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    margin: -4px -4px 0 0;
+    border-radius: 50%;
+    background: var(--dp-accent);
+    box-shadow: 0 0 0 3px rgba(10, 11, 13, 0.6);
+}
+
+.strata-annotations {
+    flex: 1;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: visible;
+}
+
+.strata-annotations li {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    position: relative;
+    padding: 0.75rem 0 0.75rem 2.5rem;
+    border-top: 1px dashed transparent;
+    opacity: 0;
+    transform: translateX(-20px);
+    transition: border-color 0.25s ease, opacity 0.6s ease, transform 0.6s ease;
+    cursor: default;
+}
+.strata-annotations li:first-child { border-top: none; }
+.reveal.in-view .strata-annotations li { opacity: 1; transform: translateX(0); }
+/* Delay order matches: border-color, opacity, transform -- hover feedback
+   (border-color) stays instant, only the entrance is staggered. */
+.strata-annotations li:nth-child(1) { transition-delay: 0s, 0.05s, 0.05s; }
+.strata-annotations li:nth-child(2) { transition-delay: 0s, 0.13s, 0.13s; }
+.strata-annotations li:nth-child(3) { transition-delay: 0s, 0.21s, 0.21s; }
+.strata-annotations li:nth-child(4) { transition-delay: 0s, 0.29s, 0.29s; }
+.strata-annotations li:nth-child(5) { transition-delay: 0s, 0.37s, 0.37s; }
+.strata-annotations li:nth-child(6) { transition-delay: 0s, 0.45s, 0.45s; }
+
+/* Leader line reaching from the text block back toward the diagram, drawn
+   in the gap created by .strata-body's gap. */
+.strata-annotations li::before {
+    content: "";
+    position: absolute;
+    left: -3rem;
+    top: 50%;
+    width: 2rem;
+    height: 1px;
+    background: var(--dp-line-strong);
+    opacity: 0.5;
+    transition: opacity 0.25s ease, background 0.25s ease;
+}
+.strata-annotations li.is-active::before {
+    opacity: 1;
+    background: var(--dp-accent);
+}
+
+.strata-index {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--dp-dim);
+    flex: none;
+    width: 1.6rem;
+}
+.strata-annotations li.is-active .strata-index {
+    color: var(--dp-accent);
+}
+
+.strata-annotations h3 {
+    margin: 0 0 0.2em;
+    font-size: 1rem;
+    color: var(--dp-text);
+}
+.strata-annotations p {
+    margin: 0;
+    font-size: 0.88rem;
+    line-height: 1.5;
+    color: var(--dp-dim);
+    max-width: 42ch;
+}
+
+/* Pillars ---------------------------------------------------------------*/
+.pillars-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+}
+
+.pillar-card {
+    position: relative;
+    padding: 1.5rem 1.4rem;
+    border: 1px dashed var(--dp-line-strong);
+    background: rgba(255, 255, 255, 0.02);
+    opacity: 0;
+    transform: translateY(20px);
+    transition: transform 0.25s ease, border-color 0.25s ease, background 0.25s ease,
+        opacity 0.6s ease, transform 0.6s ease;
+}
+.pillar-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--dp-accent);
+    background: rgba(106, 149, 255, 0.06);
+    transition-delay: 0s;
+}
+.reveal.in-view .pillar-card { opacity: 1; transform: translateY(0); }
+.pillars-grid .pillar-card:nth-child(1) { transition-delay: 0s; }
+.pillars-grid .pillar-card:nth-child(2) { transition-delay: 0.1s; }
+.pillars-grid .pillar-card:nth-child(3) { transition-delay: 0.2s; }
+.pillars-grid .pillar-card:nth-child(4) { transition-delay: 0.3s; }
+
+/* Corner ticks -- small crosshair marks, blueprint/schematic feel. */
+.pillar-card::before,
+.pillar-card::after {
+    content: "";
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-color: var(--dp-line-strong);
+    opacity: 0.8;
+}
+.pillar-card::before {
+    top: -1px; left: -1px;
+    border-top: 1px solid; border-left: 1px solid;
+}
+.pillar-card::after {
+    bottom: -1px; right: -1px;
+    border-bottom: 1px solid; border-right: 1px solid;
+}
+
+.pillar-index {
+    display: block;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--dp-dim);
+    margin-bottom: 0.8em;
+}
+
+.pillar-card .tag-chip {
+    margin-bottom: 0.8em;
+}
+
+.pillar-card h3 {
+    margin: 0 0 0.4em;
+    font-size: 1.05rem;
+    color: var(--dp-text);
+}
+.pillar-card p {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.55;
+    color: var(--dp-dim);
+}
+
+/* Manifesto / annotated statement ---------------------------------------*/
+.manifesto-text {
+    font-size: clamp(1.1rem, 2.4vw, 1.4rem);
+    line-height: 1.7;
+    max-width: 68ch;
+    color: var(--dp-text);
+}
+
+.annotate {
+    position: relative;
+    color: var(--dp-accent);
+    border-bottom: 1px dotted currentColor;
+    cursor: help;
+}
+
+/* Leader line + note bubble, self-contained on the term itself so no JS
+   geometry is needed to line it up with anything else -- hover/focus only. */
+.annotate::before,
+.annotate::after {
+    position: absolute;
+    left: 50%;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.annotate::before {
+    content: "";
+    bottom: 100%;
+    width: 1px;
+    height: 14px;
+    background: var(--dp-accent);
+    transform: translate(-50%, 6px);
+}
+.annotate::after {
+    content: attr(data-note);
+    bottom: calc(100% + 14px);
+    transform: translate(-50%, 6px);
+    width: max-content;
+    max-width: 26ch;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    line-height: 1.4;
+    letter-spacing: 0.01em;
+    text-transform: none;
+    color: var(--dp-text);
+    background: var(--dp-bg-soft);
+    border: 1px solid var(--dp-line-strong);
+    padding: 0.5em 0.7em;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+    z-index: 4;
+}
+.annotate:hover::before,
+.annotate:hover::after,
+.annotate:focus::before,
+.annotate:focus::after {
+    opacity: 1;
+    transform: translate(-50%, 0);
+}
+
+/* CTA ---------------------------------------------------------------------*/
+.proj-cta {
+    display: flex;
+    justify-content: center;
+    padding-top: 4rem;
+}
+.proj-cta-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6em;
+    position: relative;
+    font-family: var(--mono);
+    font-size: 0.9rem;
+    letter-spacing: 0.06em;
+    text-transform: lowercase;
+    text-decoration: none;
+    color: var(--dp-text);
+    padding-bottom: 0.3em;
+    transition: color 0.2s ease, gap 0.2s ease;
+}
+/* Underline that grows in from the left on hover, plus the arrow sliding
+   right -- no boxed/pill border around the text. */
+.proj-cta-link::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 1px;
+    background: currentColor;
+    transform: scaleX(0.25);
+    transform-origin: left;
+    transition: transform 0.3s ease;
+}
+.proj-cta-link .arrow {
+    display: inline-block;
+    transition: transform 0.3s ease;
+}
+.proj-cta-link:hover {
+    color: var(--dp-accent);
+    gap: 0.9em;
+}
+.proj-cta-link:hover::after { transform: scaleX(1); }
+.proj-cta-link:hover .arrow { transform: translateX(4px); }
+
+@media (max-width: 860px) {
+    .proj-hero {
+        grid-template-columns: 1fr;
+        min-height: auto;
+        padding-top: 3rem;
+        gap: 2.5rem;
+    }
+    .globe-wrap { width: min(60vw, 260px); }
+}
+
+@media (max-width: 720px) {
+    .strata-body {
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+    .strata-diagram {
+        flex: 0 0 160px;
+        flex-direction: row;
+    }
+    .strata-band:first-child { border-top: none; border-left: none; }
+    .strata-band { border-top: none; border-left: 1px solid rgba(255,255,255,0.08); }
+    .band-dot { right: 50%; top: 0; margin: -4px -4px 0 0; }
+    .strata-annotations li { padding-left: 1.5rem; }
+    .strata-annotations li::before { left: 0; width: 1rem; }
+    .pillars-grid { grid-template-columns: 1fr; }
+    .proj-section-head::before { font-size: 3.4rem; }
+}

@@ -1,0 +1,495 @@
+/* ==========================================================================
+   LE PROJET -- page dédiée, style "relevé technique / coupe géologique
+   annotée". Réutilise les variables couleur de style.css (bandes de la
+   coupe, teintes terre, accent bleu ripple) pour rester cohérent avec la
+   page d'accueil, mais autorise le scroll (contrairement à html,body en
+   overflow:hidden globalement, voir html.project-page / body.project-page
+   plus bas).
+   ========================================================================== */
+
+:root {
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    --accent: var(--cube-ripple-color-a);
+}
+
+html.project-page,
+body.project-page {
+    overflow-y: auto;
+    overflow-x: hidden;
+    height: auto;
+    min-height: 100%;
+}
+
+body.project-page main {
+    display: block;
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 6rem;
+    color: var(--nav-label-color);
+    position: relative;
+}
+
+/* Cursor-follow ring -- small, low-key, purely decorative marker that trails
+   the pointer. Position set every frame in le-projet.js via translate3d. */
+.cursor-ring {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 22px;
+    height: 22px;
+    margin: -11px 0 0 -11px;
+    border: 1px solid var(--accent);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 5;
+    opacity: 0.6;
+    transition: opacity 0.2s ease, transform 0.08s ease-out;
+    will-change: transform;
+}
+
+/* Scroll-reveal -- sections start slightly lowered/faded, JS adds .in-view
+   via IntersectionObserver as each scrolls in. */
+.reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+}
+.reveal.in-view {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Small recurring building blocks -------------------------------------- */
+/* Bracket-style readout label, no boxed/pill background -- brackets are
+   plain characters (::before/::after content), not a bordered box. */
+.tag-chip {
+    display: inline-flex;
+    align-items: center;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--nav-label-color);
+}
+.tag-chip::before {
+    content: "[ ";
+    opacity: 0.45;
+}
+.tag-chip::after {
+    content: " ]";
+    opacity: 0.45;
+}
+.tag-chip--accent {
+    color: var(--accent);
+}
+
+.dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex: none;
+}
+
+/* Hero -------------------------------------------------------------------*/
+.proj-hero {
+    min-height: 70vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1.25rem;
+}
+
+.proj-eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--cube-hover-color);
+}
+
+.proj-title {
+    font-size: clamp(2.6rem, 7vw, 5rem);
+    line-height: 1;
+    margin: 0;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+.proj-lede {
+    max-width: 46ch;
+    font-size: 1.1rem;
+    line-height: 1.6;
+    color: var(--nav-label-color);
+    opacity: 0.85;
+}
+
+.proj-scroll-cue {
+    display: flex;
+    align-items: center;
+    gap: 0.6em;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.6;
+}
+.proj-scroll-cue span {
+    display: block;
+    width: 1px;
+    height: 28px;
+    background: var(--nav-label-color);
+    animation: scroll-cue-pulse 1.6s ease-in-out infinite;
+}
+@keyframes scroll-cue-pulse {
+    0%, 100% { transform: scaleY(0.4); opacity: 0.3; }
+    50% { transform: scaleY(1); opacity: 0.9; }
+}
+
+/* Shared section head ------------------------------------------------- */
+.proj-section {
+    padding: 5rem 0;
+    border-top: 1px dashed var(--cube-wire-color);
+}
+.proj-section-head {
+    max-width: 60ch;
+    margin-bottom: 2.5rem;
+}
+.proj-section-head h2 {
+    font-size: clamp(1.6rem, 4vw, 2.2rem);
+    margin: 0.6em 0 0.4em;
+    letter-spacing: -0.01em;
+}
+.proj-section-head p {
+    line-height: 1.6;
+    opacity: 0.8;
+}
+
+/* Strata diagram --------------------------------------------------------*/
+.strata-body {
+    display: flex;
+    gap: 3rem;
+    min-height: 420px;
+}
+
+.strata-diagram {
+    flex: 0 0 220px;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--cube-wire-color);
+    overflow: hidden;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+    will-change: transform;
+}
+
+.strata-band {
+    flex: 1;
+    position: relative;
+    background: var(--band-color);
+    border-top: 1px solid rgba(0, 0, 0, 0.15);
+    opacity: 0;
+    transform: translateX(28px);
+    transition: filter 0.25s ease, flex-grow 0.25s ease,
+        opacity 0.6s ease, transform 0.6s ease;
+}
+.strata-band:first-child { border-top: none; }
+.strata-band.is-active {
+    filter: brightness(1.18) saturate(1.15);
+    flex-grow: 1.15;
+}
+/* Cascading "deposition" entrance -- top band settles in first, each one
+   below it a beat later, once the section scrolls into view. */
+.reveal.in-view .strata-band { opacity: 1; transform: translateX(0); }
+/* Delay order matches the transition list above: filter, flex-grow, opacity,
+   transform -- keeps hover feedback (filter/flex-grow) instant while only the
+   one-time entrance (opacity/transform) gets staggered. */
+.strata-band:nth-child(1) { transition-delay: 0s, 0s, 0s, 0s; }
+.strata-band:nth-child(2) { transition-delay: 0s, 0s, 0.08s, 0.08s; }
+.strata-band:nth-child(3) { transition-delay: 0s, 0s, 0.16s, 0.16s; }
+.strata-band:nth-child(4) { transition-delay: 0s, 0s, 0.24s, 0.24s; }
+.strata-band:nth-child(5) { transition-delay: 0s, 0s, 0.32s, 0.32s; }
+.strata-band:nth-child(6) { transition-delay: 0s, 0s, 0.4s, 0.4s; }
+
+.band-dot {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    margin: -4px -4px 0 0;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.25);
+}
+
+.strata-annotations {
+    flex: 1;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: visible;
+}
+
+.strata-annotations li {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    position: relative;
+    padding: 0.75rem 0 0.75rem 2.5rem;
+    border-top: 1px dashed transparent;
+    opacity: 0;
+    transform: translateX(-20px);
+    transition: border-color 0.25s ease, opacity 0.6s ease, transform 0.6s ease;
+    cursor: default;
+}
+.strata-annotations li:first-child { border-top: none; }
+.reveal.in-view .strata-annotations li { opacity: 1; transform: translateX(0); }
+/* Delay order matches: border-color, opacity, transform -- hover feedback
+   (border-color) stays instant, only the entrance is staggered. */
+.strata-annotations li:nth-child(1) { transition-delay: 0s, 0.05s, 0.05s; }
+.strata-annotations li:nth-child(2) { transition-delay: 0s, 0.13s, 0.13s; }
+.strata-annotations li:nth-child(3) { transition-delay: 0s, 0.21s, 0.21s; }
+.strata-annotations li:nth-child(4) { transition-delay: 0s, 0.29s, 0.29s; }
+.strata-annotations li:nth-child(5) { transition-delay: 0s, 0.37s, 0.37s; }
+.strata-annotations li:nth-child(6) { transition-delay: 0s, 0.45s, 0.45s; }
+
+/* Leader line reaching from the text block back toward the diagram, drawn
+   in the gap created by .strata-body's gap. */
+.strata-annotations li::before {
+    content: "";
+    position: absolute;
+    left: -3rem;
+    top: 50%;
+    width: 2rem;
+    height: 1px;
+    background: var(--cube-wire-color);
+    opacity: 0.5;
+    transition: opacity 0.25s ease, background 0.25s ease;
+}
+.strata-annotations li.is-active::before {
+    opacity: 1;
+    background: var(--cube-hover-color);
+}
+
+.strata-index {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    opacity: 0.5;
+    flex: none;
+    width: 1.6rem;
+}
+.strata-annotations li.is-active .strata-index {
+    opacity: 1;
+    color: var(--cube-hover-color);
+}
+
+.strata-annotations h3 {
+    margin: 0 0 0.2em;
+    font-size: 1rem;
+}
+.strata-annotations p {
+    margin: 0;
+    font-size: 0.88rem;
+    line-height: 1.5;
+    opacity: 0.75;
+    max-width: 42ch;
+}
+
+/* Pillars ---------------------------------------------------------------*/
+.pillars-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+}
+
+.pillar-card {
+    position: relative;
+    padding: 1.5rem 1.4rem;
+    border: 1px dashed var(--cube-wire-color);
+    background: rgba(255, 255, 255, 0.25);
+    opacity: 0;
+    transform: translateY(20px);
+    transition: transform 0.25s ease, border-color 0.25s ease, background 0.25s ease,
+        opacity 0.6s ease, transform 0.6s ease;
+}
+.pillar-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--cube-hover-color);
+    background: rgba(255, 255, 255, 0.45);
+    transition-delay: 0s;
+}
+.reveal.in-view .pillar-card { opacity: 1; transform: translateY(0); }
+.pillars-grid .pillar-card:nth-child(1) { transition-delay: 0s; }
+.pillars-grid .pillar-card:nth-child(2) { transition-delay: 0.1s; }
+.pillars-grid .pillar-card:nth-child(3) { transition-delay: 0.2s; }
+.pillars-grid .pillar-card:nth-child(4) { transition-delay: 0.3s; }
+
+/* Corner ticks -- small crosshair marks, blueprint/schematic feel. */
+.pillar-card::before,
+.pillar-card::after {
+    content: "";
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-color: var(--cube-wire-color);
+    opacity: 0.6;
+}
+.pillar-card::before {
+    top: -1px; left: -1px;
+    border-top: 1px solid; border-left: 1px solid;
+}
+.pillar-card::after {
+    bottom: -1px; right: -1px;
+    border-bottom: 1px solid; border-right: 1px solid;
+}
+
+.pillar-index {
+    display: block;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    opacity: 0.5;
+    margin-bottom: 0.8em;
+}
+
+.pillar-card .tag-chip {
+    margin-bottom: 0.8em;
+}
+
+.pillar-card h3 {
+    margin: 0 0 0.4em;
+    font-size: 1.05rem;
+}
+.pillar-card p {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.55;
+    opacity: 0.78;
+}
+
+/* Manifesto / annotated statement ---------------------------------------*/
+.manifesto-text {
+    font-size: clamp(1.1rem, 2.4vw, 1.4rem);
+    line-height: 1.7;
+    max-width: 68ch;
+}
+
+.annotate {
+    position: relative;
+    color: var(--cube-hover-color);
+    border-bottom: 1px dotted currentColor;
+    cursor: help;
+}
+
+/* Leader line + note bubble, self-contained on the term itself so no JS
+   geometry is needed to line it up with anything else -- hover/focus only. */
+.annotate::before,
+.annotate::after {
+    position: absolute;
+    left: 50%;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.annotate::before {
+    content: "";
+    bottom: 100%;
+    width: 1px;
+    height: 14px;
+    background: var(--cube-hover-color);
+    transform: translate(-50%, 6px);
+}
+.annotate::after {
+    content: attr(data-note);
+    bottom: calc(100% + 14px);
+    transform: translate(-50%, 6px);
+    width: max-content;
+    max-width: 26ch;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    line-height: 1.4;
+    letter-spacing: 0.01em;
+    text-transform: none;
+    color: var(--cube-band-0);
+    background: #fff;
+    border: 1px solid var(--cube-wire-color);
+    padding: 0.5em 0.7em;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    z-index: 4;
+}
+.annotate:hover::before,
+.annotate:hover::after,
+.annotate:focus::before,
+.annotate:focus::after {
+    opacity: 1;
+    transform: translate(-50%, 0);
+}
+
+/* CTA ---------------------------------------------------------------------*/
+.proj-cta {
+    display: flex;
+    justify-content: center;
+    padding-top: 4rem;
+}
+.proj-cta-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6em;
+    position: relative;
+    font-family: var(--mono);
+    font-size: 0.9rem;
+    letter-spacing: 0.06em;
+    text-transform: lowercase;
+    text-decoration: none;
+    color: var(--nav-label-color);
+    padding-bottom: 0.3em;
+    transition: color 0.2s ease, gap 0.2s ease;
+}
+/* Underline that grows in from the left on hover, plus the arrow sliding
+   right -- no boxed/pill border around the text. */
+.proj-cta-link::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 1px;
+    background: currentColor;
+    transform: scaleX(0.25);
+    transform-origin: left;
+    transition: transform 0.3s ease;
+}
+.proj-cta-link .arrow {
+    display: inline-block;
+    transition: transform 0.3s ease;
+}
+.proj-cta-link:hover {
+    color: var(--cube-hover-color);
+    gap: 0.9em;
+}
+.proj-cta-link:hover::after { transform: scaleX(1); }
+.proj-cta-link:hover .arrow { transform: translateX(4px); }
+
+@media (max-width: 720px) {
+    .strata-body {
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+    .strata-diagram {
+        flex: 0 0 160px;
+        flex-direction: row;
+    }
+    .strata-band:first-child { border-top: none; border-left: none; }
+    .strata-band { border-top: none; border-left: 1px solid rgba(0,0,0,0.15); }
+    .band-dot { right: 50%; top: 0; margin: -4px -4px 0 0; }
+    .strata-annotations li { padding-left: 1.5rem; }
+    .strata-annotations li::before { left: 0; width: 1rem; }
+    .pillars-grid { grid-template-columns: 1fr; }
+}

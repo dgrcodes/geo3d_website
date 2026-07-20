@@ -1,0 +1,518 @@
+/* ==========================================================================
+   LE PROJET -- v3. Repart du look clair/terre de l'accueil (voir index.html
+   + bg-dots.js pour le fond à points), avec une section centrale en scroll
+   horizontal épinglé (GSAP ScrollTrigger) : un terrain en halftone défile
+   sous le curseur pendant qu'on scrolle verticalement, façon vitrine de
+   référence (montagne halftone + callouts techniques). v1 (claire, sans
+   scroll horizontal) et v2 (sombre) sont archivées dans _archive/.
+   ========================================================================== */
+
+:root {
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    --accent: var(--cube-ripple-color-a);
+    --highlight: #e3bd3e;
+}
+
+html.project-page,
+body.project-page {
+    overflow-y: auto;
+    overflow-x: hidden;
+    height: auto;
+    min-height: 100%;
+}
+
+body.project-page main {
+    display: block;
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 6rem;
+    color: var(--nav-label-color);
+    position: relative;
+}
+
+/* Cursor-follow ring -- small, low-key, purely decorative marker that trails
+   the pointer. Position set every frame in le-projet.js via translate3d. */
+.cursor-ring {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 22px;
+    height: 22px;
+    margin: -11px 0 0 -11px;
+    border: 1px solid var(--accent);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 5;
+    opacity: 0.6;
+    transition: opacity 0.2s ease, transform 0.08s ease-out;
+    will-change: transform;
+}
+
+/* Scroll-reveal -- sections start slightly lowered/faded, JS adds .in-view
+   via IntersectionObserver as each scrolls in. */
+.reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+}
+.reveal.in-view {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Small recurring building blocks -------------------------------------- */
+/* Bracket-style readout label, no boxed/pill background -- brackets are
+   plain characters (::before/::after content), not a bordered box. */
+.tag-chip {
+    display: inline-flex;
+    align-items: center;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--nav-label-color);
+}
+.tag-chip::before { content: "[ "; opacity: 0.45; }
+.tag-chip::after { content: " ]"; opacity: 0.45; }
+.tag-chip--accent { color: var(--accent); }
+
+.dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex: none;
+}
+
+/* Hero -------------------------------------------------------------------*/
+.proj-hero {
+    min-height: 60vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1.25rem;
+}
+
+.proj-eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--cube-hover-color);
+}
+
+.proj-title {
+    font-size: clamp(2.6rem, 7vw, 5rem);
+    line-height: 1;
+    margin: 0;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+.proj-lede {
+    max-width: 46ch;
+    font-size: 1.1rem;
+    line-height: 1.6;
+    color: var(--nav-label-color);
+    opacity: 0.85;
+}
+
+.proj-scroll-cue {
+    display: flex;
+    align-items: center;
+    gap: 0.6em;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.6;
+}
+.proj-scroll-cue span {
+    display: block;
+    width: 1px;
+    height: 28px;
+    background: var(--nav-label-color);
+    animation: scroll-cue-pulse 1.6s ease-in-out infinite;
+}
+@keyframes scroll-cue-pulse {
+    0%, 100% { transform: scaleY(0.4); opacity: 0.3; }
+    50% { transform: scaleY(1); opacity: 0.9; }
+}
+
+/* Shared section head ------------------------------------------------- */
+.proj-section {
+    padding: 5rem 0;
+    border-top: 1px dashed var(--cube-wire-color);
+}
+.proj-section-head {
+    max-width: 60ch;
+    margin-bottom: 2.5rem;
+}
+.proj-section-head h2 {
+    font-size: clamp(1.6rem, 4vw, 2.2rem);
+    margin: 0.6em 0 0.4em;
+    letter-spacing: -0.01em;
+}
+.proj-section-head p {
+    line-height: 1.6;
+    opacity: 0.8;
+}
+
+/* =========================================================================
+   TERRAIN -- scroll horizontal épinglé. Sort du conteneur .960px de <main>
+   pour occuper toute la largeur (astuce 100vw + margin-left négatif).
+   ========================================================================= */
+.terrain-scene {
+    position: relative;
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
+    height: 100vh;
+    overflow: hidden;
+    /* Firewatch/jungle-style sky wash, own backdrop for this section (not
+       the page's bg-dots grid showing through -- a deliberate departure so
+       the illustration reads as one clean scene, see terrain-2d.js header
+       comment). */
+    background: linear-gradient(180deg, #eef6f2 0%, #dcece4 55%, #c9dfd4 100%);
+}
+
+.terrain-scene-head {
+    position: absolute;
+    top: 6vh;
+    left: 5vw;
+    z-index: 3;
+    max-width: 32ch;
+}
+.terrain-scene-head h2 {
+    font-size: clamp(1.6rem, 4vw, 2.2rem);
+    margin: 0.5em 0 0.3em;
+    letter-spacing: -0.01em;
+}
+.terrain-scene-head p {
+    font-size: 0.92rem;
+    line-height: 1.55;
+    opacity: 0.75;
+}
+
+/* Flat SVG mountain layers mount into this container (see terrain-2d.js) --
+   one .terrain-layer div per depth (back/mid/front), each holding its own
+   SVG and translated sideways at its own rate on scroll for parallax. */
+.terrain-2d {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+}
+.terrain-layer {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    will-change: transform;
+}
+.terrain-layer-svg {
+    display: block;
+    height: 100%;
+}
+
+/* Anchor points -- left/top set once (at layout/resize) by terrain-2d.js to
+   sit exactly on the front layer's ridge; movement comes for free from the
+   parent .terrain-layer's transform, no per-frame position updates needed. */
+.terrain-waypoint {
+    position: absolute;
+    width: 0;
+    height: 0;
+    transition: opacity 0.2s ease;
+}
+
+/* Multi-ring pulse fired as the camera passes each waypoint (see
+   terrain-2d.js toggling .is-pulsing on 3 staggered rings) -- the 2D
+   stand-in for the cube's ripple shader, including its colorA<->colorB
+   cycling. */
+.terrain-ripple {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 9px;
+    height: 9px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    border: 2px solid var(--cube-ripple-color-a);
+    opacity: 0;
+    pointer-events: none;
+}
+.terrain-ripple.is-pulsing {
+    animation: terrain-ripple-pulse 1.1s ease-out, terrain-ripple-color 1.1s ease-in-out;
+}
+@keyframes terrain-ripple-pulse {
+    0% { opacity: 0.8; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(6); }
+}
+@keyframes terrain-ripple-color {
+    0%, 100% { border-color: var(--cube-ripple-color-a); }
+    50% { border-color: var(--cube-ripple-color-b); }
+}
+
+/* Front layer's stroked ridge glow (see terrain-2d.js's def.bordered path) --
+   the 2D stand-in for the cube's fresnel rim. */
+.terrain-rim-glow {
+    filter: blur(3px);
+}
+
+/* Flowing wave line through each strata band (see terrain-2d.js) -- a cheap
+   2D stand-in for the cube's animated flowing wave-line shader. Dash offset
+   creeps continuously for the same "flowing" read as the cube's
+   uTime-driven lines. */
+.terrain-wave-streak {
+    animation: terrain-wave-flow 6s linear infinite;
+}
+@keyframes terrain-wave-flow {
+    from { stroke-dashoffset: 0; }
+    to { stroke-dashoffset: -38; }
+}
+
+.terrain-marker-dot {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform: translate(-50%, -50%);
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--cube-hover-color);
+    box-shadow: 0 0 0 4px #d3dada;
+}
+
+.terrain-marker-line {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform: translate(-50%, -100%);
+    width: 1px;
+    height: 34px;
+    background: var(--cube-wire-color);
+    opacity: 0.55;
+}
+
+.terrain-annotation {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform: translate(-50%, calc(-100% - 34px));
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: max-content;
+    max-width: 230px;
+    pointer-events: auto;
+}
+
+/* Deliberate exception to the site's "no text in a rounded border" rule --
+   this card + tag are a direct, literal recreation of the moodboard
+   reference callout, not a generic UI chip. */
+.terrain-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    font-family: var(--mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #fff;
+    background: var(--accent);
+    border-radius: 999px;
+    padding: 0.3em 0.75em;
+    margin-bottom: 0.6rem;
+}
+
+.terrain-callout {
+    position: relative;
+    background: #fff;
+    border-radius: 10px;
+    padding: 0.85em 1em;
+    font-size: 0.85rem;
+    line-height: 1.45;
+    color: var(--nav-label-color);
+    box-shadow: 0 10px 26px rgba(61, 43, 31, 0.18);
+}
+.terrain-callout::after {
+    content: "";
+    position: absolute;
+    bottom: -7px;
+    left: 24px;
+    width: 0;
+    height: 0;
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-top: 8px solid #fff;
+}
+.terrain-callout p {
+    margin: 0;
+}
+
+/* HUD -- viewport-relative overlay (sibling of the track, not affected by
+   its transform), progress bar + index readout driven by ScrollTrigger.
+   Light scrim behind it -- the terrain now ranges from a pale sky to a
+   deep green hill depending on scroll position, and this needs to read
+   against either. */
+.terrain-hud {
+    position: absolute;
+    left: 5vw;
+    bottom: 6vh;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0.5em 0.9em;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 4px;
+}
+.terrain-progress-track {
+    position: relative;
+    width: 200px;
+    height: 8px;
+    background: rgba(61, 43, 31, 0.15);
+}
+.terrain-progress-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 0%;
+    background: var(--highlight);
+}
+.terrain-progress-index {
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--nav-label-color);
+    min-width: 2ch;
+}
+
+/* Small hatched swatch, top-right -- decorative technical-diagram texture,
+   echoes the moodboard's corner hatching. */
+.terrain-hatch {
+    position: absolute;
+    top: 5vh;
+    right: 5vw;
+    width: 120px;
+    height: 90px;
+    z-index: 2;
+    opacity: 0.35;
+    background-image: repeating-linear-gradient(
+        135deg,
+        var(--cube-wire-color) 0,
+        var(--cube-wire-color) 1px,
+        transparent 1px,
+        transparent 9px
+    );
+}
+
+/* Manifesto / annotated statement ---------------------------------------*/
+.manifesto-text {
+    font-size: clamp(1.1rem, 2.4vw, 1.4rem);
+    line-height: 1.7;
+    max-width: 68ch;
+}
+
+.annotate {
+    position: relative;
+    color: var(--cube-hover-color);
+    border-bottom: 1px dotted currentColor;
+    cursor: help;
+}
+
+.annotate::before,
+.annotate::after {
+    position: absolute;
+    left: 50%;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.annotate::before {
+    content: "";
+    bottom: 100%;
+    width: 1px;
+    height: 14px;
+    background: var(--cube-hover-color);
+    transform: translate(-50%, 6px);
+}
+.annotate::after {
+    content: attr(data-note);
+    bottom: calc(100% + 14px);
+    transform: translate(-50%, 6px);
+    width: max-content;
+    max-width: 26ch;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    line-height: 1.4;
+    letter-spacing: 0.01em;
+    text-transform: none;
+    color: var(--cube-band-0);
+    background: #fff;
+    border: 1px solid var(--cube-wire-color);
+    padding: 0.5em 0.7em;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    z-index: 4;
+}
+.annotate:hover::before,
+.annotate:hover::after,
+.annotate:focus::before,
+.annotate:focus::after {
+    opacity: 1;
+    transform: translate(-50%, 0);
+}
+
+/* CTA ---------------------------------------------------------------------*/
+.proj-cta {
+    display: flex;
+    justify-content: center;
+    padding-top: 4rem;
+}
+.proj-cta-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6em;
+    position: relative;
+    font-family: var(--mono);
+    font-size: 0.9rem;
+    letter-spacing: 0.06em;
+    text-transform: lowercase;
+    text-decoration: none;
+    color: var(--nav-label-color);
+    padding-bottom: 0.3em;
+    transition: color 0.2s ease, gap 0.2s ease;
+}
+.proj-cta-link::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 1px;
+    background: currentColor;
+    transform: scaleX(0.25);
+    transform-origin: left;
+    transition: transform 0.3s ease;
+}
+.proj-cta-link .arrow {
+    display: inline-block;
+    transition: transform 0.3s ease;
+}
+.proj-cta-link:hover {
+    color: var(--cube-hover-color);
+    gap: 0.9em;
+}
+.proj-cta-link:hover::after { transform: scaleX(1); }
+.proj-cta-link:hover .arrow { transform: translateX(4px); }
+
+@media (max-width: 720px) {
+    .terrain-scene-head { max-width: 70vw; }
+    .terrain-hatch { display: none; }
+    .terrain-hud { left: 5vw; bottom: 4vh; }
+    .terrain-progress-track { width: 130px; }
+}

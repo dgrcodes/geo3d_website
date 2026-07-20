@@ -52,7 +52,7 @@
         <!-- TERRAIN -- pleine largeur malgré le conteneur .960px de <main>
              (voir l'astuce 100vw + margin-left négatif en CSS). -->
         <section class="terrain-scene">
-        <div class="terrain-2d" aria-hidden="true"></div>
+        <div class="terrain-3d" aria-hidden="true"></div>
         <div class="terrain-hatch" aria-hidden="true"></div>
 
         <header class="terrain-scene-head">
@@ -61,11 +61,8 @@
             <p>Lorem ipsum dolor sit amet consectetur adipiscing elit, sed do eiusmod tempor. Continuez à scroller.</p>
         </header>
 
-        <!-- Waypoints start here as plain markup; terrain-2d.js moves each
-             one into the front layer's track div and sets its left/top to
-             sit on the ridge, so they inherit that layer's scroll transform
-             for free instead of needing a per-frame position update. -->
-        <div class="terrain-waypoint" data-progress="0.08">
+        <div class="terrain-waypoints">
+            <div class="terrain-waypoint" data-progress="0.08">
                 <div class="terrain-annotation">
                     <span class="terrain-tag">terrain</span>
                     <div class="terrain-callout">
@@ -108,6 +105,7 @@
                 <span class="terrain-marker-line"></span>
                 <span class="terrain-marker-dot"></span>
             </div>
+        </div>
 
         <div class="terrain-hud">
             <div class="terrain-progress-track">
@@ -150,9 +148,9 @@
     <!-- ============== FIN FOOTER ============== -->
 
     <script src="./assets/scripts/bg-dots.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="./assets/scripts/terrain-3d.js"></script>
     <script src="./assets/scripts/le-projet.js"></script>
 </body>
