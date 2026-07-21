@@ -1,17 +1,17 @@
 <!DOCTYPE html>
-<html lang="fr" class="project-page">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Le Projet — GEO3D</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="./assets/scripts/le-projet.css">
+    <link rel="stylesheet" href="./assets/scripts/cube-face.css">
 </head>
-<body class="project-page">
+<body class="cube-face-page">
     <!-- ============== DÉBUT HEADER ============== -->
 <header>
     <nav class="navbar">
-        <div class="logo">
+         <div class="logo">
             <a href="./index.html" style="color: inherit; text-decoration: none;">GEO3D</a>
         </div>
         <div class="nav-links">
@@ -37,109 +37,9 @@
 
     <!-- ============== DÉBUT MAIN ============== -->
     <main>
-        <!-- HERO -->
-        <section class="proj-hero reveal">
-            <div class="proj-eyebrow"><span class="dot"></span>geo3d — dossier 01</div>
-            <h1 class="proj-title">Le Projet</h1>
-            <p class="proj-lede">
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit. GEO3D reconstitue
-                des coupes stratigraphiques en trois dimensions pour rendre lisible ce qui,
-                sur le terrain, reste enfoui sous la surface.
-            </p>
-            <div class="proj-scroll-cue"><span></span>scroller</div>
-        </section>
-
-        <!-- TERRAIN -- pleine largeur malgré le conteneur .960px de <main>
-             (voir l'astuce 100vw + margin-left négatif en CSS). -->
-        <section class="terrain-scene">
-        <div class="terrain-2d" aria-hidden="true"></div>
-        <div class="terrain-hatch" aria-hidden="true"></div>
-
-        <header class="terrain-scene-head">
-            <span class="tag-chip">02 / terrain</span>
-            <h2>Traverser le relevé</h2>
-            <p>Lorem ipsum dolor sit amet consectetur adipiscing elit, sed do eiusmod tempor. Continuez à scroller.</p>
-        </header>
-
-        <!-- Waypoints start here as plain markup; terrain-2d.js moves each
-             one into the front layer's track div and sets its left/top to
-             sit on the ridge, so they inherit that layer's scroll transform
-             for free instead of needing a per-frame position update. -->
-        <div class="terrain-waypoint" data-progress="0.08">
-                <div class="terrain-annotation">
-                    <span class="terrain-tag">terrain</span>
-                    <div class="terrain-callout">
-                        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit sed do eiusmod tempor incididunt.</p>
-                    </div>
-                </div>
-                <span class="terrain-marker-line"></span>
-                <span class="terrain-marker-dot"></span>
-            </div>
-
-            <div class="terrain-waypoint" data-progress="0.36">
-                <div class="terrain-annotation">
-                    <span class="terrain-tag">modèle</span>
-                    <div class="terrain-callout">
-                        <p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip.</p>
-                    </div>
-                </div>
-                <span class="terrain-marker-line"></span>
-                <span class="terrain-marker-dot"></span>
-            </div>
-
-            <div class="terrain-waypoint" data-progress="0.64">
-                <div class="terrain-annotation">
-                    <span class="terrain-tag">données</span>
-                    <div class="terrain-callout">
-                        <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu.</p>
-                    </div>
-                </div>
-                <span class="terrain-marker-line"></span>
-                <span class="terrain-marker-dot"></span>
-            </div>
-
-            <div class="terrain-waypoint" data-progress="0.92">
-                <div class="terrain-annotation">
-                    <span class="terrain-tag">lab</span>
-                    <div class="terrain-callout">
-                        <p>Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt.</p>
-                    </div>
-                </div>
-                <span class="terrain-marker-line"></span>
-                <span class="terrain-marker-dot"></span>
-            </div>
-
-        <div class="terrain-hud">
-            <div class="terrain-progress-track">
-                <div class="terrain-progress-fill"></div>
-            </div>
-            <span class="terrain-progress-index">01</span>
-            <span class="tag-chip">/ 04</span>
-        </div>
-        </section>
-
-        <!-- MANIFESTE -->
-        <section class="proj-section proj-manifesto reveal">
-            <header class="proj-section-head">
-                <span class="tag-chip">03 / intention</span>
-                <h2>Pourquoi GEO3D</h2>
-            </header>
-            <p class="manifesto-text">
-                Lorem ipsum dolor sit amet
-                <span class="annotate" data-note="Modèle numérique de terrain généré à partir de relevés réels.">consectetur adipiscing</span>
-                elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim
-                ad minim veniam, quis nostrud
-                <span class="annotate" data-note="Traitement automatisé des séries de mesures collectées sur site.">exercitation ullamco</span>
-                laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in
-                <span class="annotate" data-note="Interface explorable pensée comme un laboratoire, pas un simple visualiseur.">reprehenderit in voluptate</span>
-                velit esse cillum dolore eu fugiat nulla pariatur.
-            </p>
-        </section>
-
-        <!-- CTA -->
-        <section class="proj-cta reveal">
-            <a href="./index.html" class="proj-cta-link"><span class="dot"></span>retour au cube<span class="arrow">→</span></a>
-        </section>
+        <!-- Intentionally empty -- the cube-face canvas is appended
+             directly to <body> as a fixed full-viewport layer by
+             cube-face.js, same convention as threejs.js. -->
     </main>
     <!-- ============== FIN MAIN ============== -->
 
@@ -150,10 +50,7 @@
     <!-- ============== FIN FOOTER ============== -->
 
     <script src="./assets/scripts/bg-dots.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="./assets/scripts/terrain-3d.js"></script>
-    <script src="./assets/scripts/le-projet.js"></script>
+    <script src="./assets/scripts/cube-face.js"></script>
 </body>
 </html>

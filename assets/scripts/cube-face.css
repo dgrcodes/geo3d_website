@@ -1,0 +1,16 @@
+/* =========================================================================
+   CUBE FACE -- le-projet.html hero: one face of the homepage cube, facing
+   the camera dead-on. Same transparent-canvas-over-bg-dots convention as
+   the cube itself (threejs.js).
+   ========================================================================= */
+
+body.cube-face-page header {
+    position: relative;
+    z-index: 5;
+}
+
+body.cube-face-page .cube-face-canvas {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+}
