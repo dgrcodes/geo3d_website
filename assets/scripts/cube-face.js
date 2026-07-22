@@ -44,45 +44,30 @@
        bg-dots grid, same as the homepage cube.
        ===================================================================== */
     const scene = new THREE.Scene();
-    const CAMERA_DISTANCE = 14;
     const CAMERA_FOV = 40;
-    const camera = new THREE.PerspectiveCamera(CAMERA_FOV, window.innerWidth / window.innerHeight, 0.1, 100);
-    // Vertical FOV/distance fix the visible half-height regardless of the
-    // window's aspect ratio (only the horizontal FOV changes with aspect),
-    // so this framing holds at any window size: shift the camera (and its
-    // look target, keeping the gaze horizontal) up just enough that the
-    // BOTTOM of the frustum lands exactly on the terrain's own base
-    // (-halfH), instead of centering the terrain vertically with empty
-    // space below it.
     const tanHalfFov = Math.tan((CAMERA_FOV / 2) * (Math.PI / 180));
-    const visibleHalfHeight = CAMERA_DISTANCE * tanHalfFov;
-    const cameraY = visibleHalfHeight - halfH;
-    camera.position.set(0, cameraY, CAMERA_DISTANCE);
-    camera.lookAt(0, cameraY, 0);
+    const camera = new THREE.PerspectiveCamera(CAMERA_FOV, window.innerWidth / window.innerHeight, 0.1, 100);
+    // Actual position/distance is set by updateFraming() further down (it
+    // needs FACE_WIDTH and the background terrain's offset, which aren't
+    // defined yet at this point in the file) -- called once at startup and
+    // again on every resize.
 
-    // The screen-bottom world-Y at a given world Z: a perspective camera's
-    // frustum widens with distance, so a point at the SAME world Y but
-    // further away (more negative Z) projects HIGHER on screen, not to the
-    // same spot -- any terrain sitting behind the main one needs this to
-    // find the world Y that actually touches the visual bottom edge at ITS
-    // own depth, not just copy the main terrain's own ground Y.
+    // The screen-bottom world-Y at a given world Z, using the CAMERA'S
+    // CURRENT (dynamic) position/distance: a perspective camera's frustum
+    // widens with distance, so a point at the same world Y but further away
+    // (more negative Z) projects higher on screen, not to the same spot --
+    // any terrain sitting behind the main one needs this to find the world
+    // Y that actually touches the visual bottom edge at ITS own depth, not
+    // just copy the main terrain's own ground Y.
     function frameBottomWorldYAtZ(worldZ) {
-        const depth = CAMERA_DISTANCE - worldZ;
-        return cameraY - depth * tanHalfFov;
+        const depth = camera.position.z - worldZ;
+        return camera.position.y - depth * tanHalfFov;
     }
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.domElement.className = "cube-face-canvas";
     document.body.appendChild(renderer.domElement);
-
-    function resize() {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-    }
-    resize();
-    window.addEventListener("resize", resize);
 
     /* =====================================================================
        FACE SHADER -- copied verbatim from threejs.js's FACE_VERTEX_SHADER /
@@ -451,19 +436,49 @@
 
     // A second, bigger terrain behind the main one: 1.5x the size, shifted
     // left, sitting at the same VISUAL ground line as the main one (not
-    // lifted) -- plus a touch less opacity, a simple depth/haze cue.
+    // lifted) -- plus a touch less opacity, a simple depth/haze cue. Its Y
+    // position depends on the camera's (dynamic, aspect-dependent) framing,
+    // so it's set for real in updateFraming() below, not here.
     const backHeight = FACE_HEIGHT * 1.5;
     const backZ = -3;
-    const backGroundOffsetY = frameBottomWorldYAtZ(backZ) + backHeight / 2;
     const backTerrain = buildTerrain({
         width: FACE_WIDTH * 1.5,
         height: backHeight,
-        offset: new THREE.Vector3(-FACE_WIDTH * 0.35, backGroundOffsetY, backZ),
+        offset: new THREE.Vector3(-FACE_WIDTH * 0.35, 0, backZ),
         noiseSeedVec: new THREE.Vector3(Math.random() * 1000, Math.random() * 1000, Math.random() * 1000),
         ridgeSeedVec: new THREE.Vector3(9.1, 2.3, 0),
         opacity: baseOpacity * 0.85,
     });
     sceneGroup.add(backTerrain);
+
+    /* =====================================================================
+       RESPONSIVE FRAMING -- fit-width strategy: solves for the camera
+       distance that keeps the main terrain's full WIDTH comfortably in
+       frame at the CURRENT window aspect ratio (a fixed distance/FOV, as
+       before, over-cropped severely on narrow/mobile aspect ratios, since
+       horizontal FOV shrinks with aspect while vertical FOV stays fixed).
+       Re-run on every resize; the background terrain's ground alignment is
+       re-derived here too since it depends on the camera's own position.
+       ===================================================================== */
+    const TARGET_HALF_WIDTH = FACE_WIDTH * 0.62; // a little slack past the terrain's own half-width
+
+    function updateFraming() {
+        const aspect = window.innerWidth / window.innerHeight;
+        camera.aspect = aspect;
+
+        const distance = TARGET_HALF_WIDTH / (tanHalfFov * aspect);
+        const visibleHalfHeight = distance * tanHalfFov;
+        const cameraY = visibleHalfHeight - halfH;
+        camera.position.set(0, cameraY, distance);
+        camera.lookAt(0, cameraY, 0);
+        camera.updateProjectionMatrix();
+
+        backTerrain.position.y = frameBottomWorldYAtZ(backZ) + backHeight / 2;
+
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+    updateFraming();
+    window.addEventListener("resize", updateFraming);
 
     /* =====================================================================
        RENDER LOOP -- the wave-line animation (uTime) is the only motion,

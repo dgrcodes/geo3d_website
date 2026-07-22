@@ -1,56 +1,963 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Le Projet — GEO3D</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="./assets/scripts/cube-face.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GEO3D — Sous la surface</title>
+
+<!-- ============================================================
+     GEO3D — « Journal de forage »
+     Page immersive : le scroll = la profondeur.
+     Stack : Three.js (fond continu) + GSAP/ScrollTrigger + Lenis.
+     Le split de texte est fait maison (pas de dépendance SplitType).
+     ============================================================ -->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+/* ================= TOKENS ================= */
+:root{
+  /* Palette papier — reprise directe de la homepage */
+  --paper:#d3dada;
+  --ink:#6b503d;
+  --line: #8b6e56;
+  --faint:#6b503d;
+  --ghost:#2d1b12 !important;
+
+  /* Thème profond (strate données) */
+  --deep:#2d1b12 !important;
+  --deep-ink:#d3dada !important;
+
+  --font-display:'Archivo',sans-serif;
+  --font-mono:'IBM Plex Mono',monospace;
+
+  --ease:cubic-bezier(.19,1,.22,1);
+}
+
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:auto}
+html.lenis,html.lenis body{height:auto}
+.lenis.lenis-smooth{scroll-behavior:auto!important}
+
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--font-display);
+  overflow-x:hidden;
+  transition:background 1.2s var(--ease),color 1.2s var(--ease);
+}
+/* Inversion en profondeur — appliquée par ScrollTrigger */
+body.is-deep{background:var(--deep);color:var(--deep-ink) !important}
+body.is-deep{
+  --line:#d3dada;
+  --faint:#a0846e;
+  --ghost:#8b6e56;
+}
+
+::selection{background:var(--faint);color:var(--ghost)}
+
+/* ================= SCÈNE WEBGL ================= */
+#scene{
+  position:fixed;inset:0;
+  width:100%;height:100vh;
+  z-index:0;
+  pointer-events:none;
+}
+
+/* Grain statique — feTurbulence SVG, quasi gratuit */
+.grain{
+  position:fixed;inset:0;z-index:3;pointer-events:none;
+  opacity:.05;mix-blend-mode:multiply;
+}
+body.is-deep .grain{mix-blend-mode:screen;opacity:.07}
+
+/* ================= HUD ================= */
+.hud{
+  position:fixed;top:0;left:0;right:0;z-index:10;
+  display:flex;justify-content:space-between;align-items:center;
+  padding:22px 28px;
+  font-family:var(--font-mono);font-size:12px;letter-spacing:.08em;
+}
+.hud a{color:inherit;text-decoration:none;position:relative}
+.hud a::after{
+  content:'';position:absolute;left:0;bottom:-3px;width:100%;height:1px;
+  background:currentColor;transform:scaleX(0);transform-origin:right;
+  transition:transform .5s var(--ease);
+}
+.hud a:hover::after,.hud a:focus-visible::after{transform:scaleX(1);transform-origin:left}
+.hud .brand{font-family:var(--font-display);font-weight:700;font-size:14px;letter-spacing:.02em}
+
+/* Rail de profondeur — élément signature */
+.rail{
+  position:fixed;left:28px;top:50%;transform:translateY(-50%);
+  z-index:10;
+  display:flex;flex-direction:column;align-items:flex-start;gap:14px;
+  font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;
+}
+.rail .depth-value{
+  font-size:13px;font-weight:500;
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+}
+.rail .track{
+  width:1px;height:180px;background:var(--faint);position:relative;
+}
+.rail .track .fill{
+  position:absolute;top:0;left:0;width:100%;height:0%;
+  background:var(--line);
+}
+.rail .track .tick{
+  position:absolute;left:-3px;width:7px;height:1px;background:var(--faint);
+}
+
+/* ================= STRUCTURE DES STRATES ================= */
+main{position:relative;z-index:2}
+
+.stratum{
+  min-height:100vh;
+  position:relative;
+  display:flex;flex-direction:column;justify-content:center;
+  padding:16vh 8vw;
+}
+
+/* Étiquette de profondeur de chaque strate — remplace le 01/02/03 */
+.depth-tag{
+  font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;
+  color:var(--line);
+  display:flex;align-items:center;gap:12px;
+  margin-bottom:4vh;
+}
+.depth-tag::before{
+  content:'';display:block;width:36px;height:1px;background:var(--line);
+}
+
+/* Titres display — reveal par caractères */
+.display{
+  font-weight:700;letter-spacing:-.02em;line-height:.95;
+  text-transform:uppercase;
+  font-size:clamp(44px,9vw,132px);
+}
+.display .w{display:inline-block;white-space:nowrap}
+.display .ch{display:inline-block;will-change:transform}
+/* Masque de ligne pour le reveal */
+.mask{overflow:hidden;display:block}
+
+.lede{
+  max-width:52ch;font-size:clamp(16px,1.4vw,20px);line-height:1.55;
+  font-weight:400;margin-top:5vh;
+}
+.lede + .lede{margin-top:2.2vh}
+
+/* Annotation façon homepage : ligne fine + point + label mono */
+.annot{
+  font-family:var(--font-mono);font-size:11.5px;letter-spacing:.06em;
+  display:inline-flex;align-items:center;gap:10px;color:var(--line);
+}
+.annot::before{
+  content:'';width:5px;height:5px;border-radius:50%;
+  background:currentColor;flex:none;
+}
+
+/* ---------- Strate SURFACE ---------- */
+#s-surface{align-items:flex-start}
+#s-surface .scroll-cue{
+  position:absolute;bottom:6vh;left:8vw;
+  font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;
+  display:flex;align-items:center;gap:12px;color:var(--line);
+}
+#s-surface .scroll-cue .arrow{
+  display:block;width:1px;height:34px;background:var(--line);
+  animation:probe 2.2s var(--ease) infinite;
+}
+@keyframes probe{
+  0%{transform:scaleY(0);transform-origin:top}
+  55%{transform:scaleY(1);transform-origin:top}
+  56%{transform-origin:bottom}
+  100%{transform:scaleY(0);transform-origin:bottom}
+}
+
+/* ---------- Strate PROJET ---------- */
+#s-projet .cols{
+  display:grid;grid-template-columns:1fr 1fr;gap:6vw;align-items:end;
+}
+#s-projet .why{justify-self:end;max-width:38ch}
+
+/* ---------- Strate OBJECTIFS : cibles reliées par des tracés SVG ---------- */
+#s-objectifs{min-height:130vh}
+.targets{position:relative;margin-top:8vh}
+.targets svg{
+  position:absolute;inset:0;width:100%;height:100%;
+  overflow:visible;pointer-events:none;
+}
+.targets path{
+  fill:none;stroke:var(--line);stroke-width:1;
+}
+.target{
+  position:relative;max-width:44ch;padding-left:28px;
+  margin-bottom:11vh;
+}
+.target:nth-child(odd of .target){margin-left:38%}
+.target::before{
+  content:'';position:absolute;left:0;top:6px;width:9px;height:9px;
+  border:1px solid var(--line);border-radius:50%;
+}
+.target h3{
+  font-size:clamp(20px,2.2vw,30px);font-weight:500;
+  letter-spacing:-.01em;margin-bottom:1.4vh;
+}
+.target p{font-size:15px;line-height:1.6;color:var(--line)}
+.target .annot{margin-bottom:1vh}
+
+/* ---------- Strate ÉQUIPE : stations le long du forage ---------- */
+#s-equipe .borehole{
+  position:relative;margin-top:6vh;
+  padding-left:min(10vw,120px);
+}
+#s-equipe .borehole::before{
+  content:'';position:absolute;left:calc(min(10vw,120px)/2);top:0;bottom:0;
+  width:1px;background:var(--faint);
+}
+.station{
+  position:relative;padding:3.4vh 0;
+  border-bottom:1px solid var(--ghost);
+  cursor:default;
+}
+.station::before{
+  content:'';position:absolute;top:50%;
+  left:calc(min(10vw,120px)/-2 - 4px);
+  width:9px;height:9px;border-radius:50%;
+  border:1px solid var(--line);background:var(--paper);
+  transform:translateY(-50%);
+  transition:background .4s var(--ease),transform .4s var(--ease);
+}
+body.is-deep .station::before{background:var(--deep)}
+.station:hover::before{background:var(--ink);transform:translateY(-50%) scale(1.4)}
+body.is-deep .station:hover::before{background:var(--deep-ink)}
+.station .row{
+  display:flex;align-items:baseline;justify-content:space-between;gap:24px;
+}
+.station .name{
+  font-size:clamp(22px,3vw,42px);font-weight:500;letter-spacing:-.01em;
+  transition:transform .5s var(--ease);
+}
+.station:hover .name{transform:translateX(14px)}
+.station .role{
+  font-family:var(--font-mono);font-size:11.5px;letter-spacing:.08em;
+  color:var(--line);text-align:right;flex:none;
+}
+.station .detail{
+  max-height:0;overflow:hidden;
+  transition:max-height .6s var(--ease),opacity .6s var(--ease),margin .6s var(--ease);
+  opacity:0;margin-top:0;
+  font-size:14.5px;line-height:1.6;color:var(--line);max-width:56ch;
+}
+.station:hover .detail,.station:focus-within .detail{
+  max-height:120px;opacity:1;margin-top:1.6vh;
+}
+
+/* ---------- Strate DONNÉES (sombre) ---------- */
+#s-donnees{min-height:120vh}
+#s-donnees .contours{
+  position:absolute;inset:0;overflow:hidden;pointer-events:none;opacity:.5;
+}
+#s-donnees .contours svg{width:100%;height:100%}
+#s-donnees .contours path{fill:none;stroke:var(--ghost);stroke-width:1}
+.data-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:4vw;margin-top:9vh;
+}
+.datum{border-top:1px solid var(--faint);padding-top:2.4vh}
+.datum .num{
+  font-family:var(--font-mono);font-weight:500;
+  font-size:clamp(34px,4.4vw,64px);letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums;
+}
+.datum .num sup{font-size:.45em;letter-spacing:0}
+.datum .label{
+  font-family:var(--font-mono);font-size:11.5px;letter-spacing:.1em;
+  color:var(--line);margin-top:1vh;text-transform:uppercase;
+}
+.datum p{font-size:14px;line-height:1.6;color:var(--line);margin-top:1.6vh;max-width:30ch}
+
+/* ---------- Strate TECHNOLOGIES ---------- */
+.tech-list{margin-top:6vh;max-width:900px}
+.tech{
+  display:flex;align-items:baseline;justify-content:space-between;gap:24px;
+  padding:2.6vh 0;border-bottom:1px solid var(--ghost);
+  transition:padding-left .5s var(--ease);
+}
+.tech:first-child{border-top:1px solid var(--ghost)}
+.tech:hover{padding-left:18px}
+.tech .t-name{font-size:clamp(20px,2.6vw,36px);font-weight:500;letter-spacing:-.01em}
+.tech .t-for{
+  font-family:var(--font-mono);font-size:11.5px;letter-spacing:.08em;
+  color:var(--line);text-align:right;
+}
+
+/* ---------- Strate REMONTÉE ---------- */
+#s-fin{align-items:flex-start;text-align:left}
+#s-fin .cta{
+  margin-top:6vh;display:inline-flex;align-items:center;gap:16px;
+  font-family:var(--font-mono);font-size:13px;letter-spacing:.1em;
+  color:inherit;text-decoration:none;
+  border:1px solid var(--line);border-radius:999px;
+  padding:16px 30px;
+  transition:background .5s var(--ease),color .5s var(--ease);
+}
+#s-fin .cta:hover,#s-fin .cta:focus-visible{background:var(--ink);color:var(--paper)}
+body.is-deep #s-fin .cta:hover{background:var(--deep-ink);color:var(--deep)}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width:900px){
+  .stratum{padding:14vh 7vw}
+  .rail{left:14px}
+  .rail .track{height:110px}
+  #s-projet .cols{grid-template-columns:1fr;gap:5vh}
+  #s-projet .why{justify-self:start}
+  .target:nth-child(odd of .target){margin-left:0}
+  .data-grid{grid-template-columns:1fr;gap:6vh}
+  .station .row{flex-direction:column;align-items:flex-start;gap:6px}
+  .station .role{text-align:left}
+}
+
+/* ================= REDUCED MOTION ================= */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
+</style>
 </head>
-<body class="cube-face-page">
-    <!-- ============== DÉBUT HEADER ============== -->
-<header>
-    <nav class="navbar">
-         <div class="logo">
-            <a href="./index.html" style="color: inherit; text-decoration: none;">GEO3D</a>
-        </div>
-        <div class="nav-links">
-            <!-- Email Icon (SVG) -->
-            <a href="mailto:email@example.com">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                    <polyline points="22,6 12,13 2,6"></polyline>
-                </svg>
-            </a>
+<body>
+<body>
 
-            <!-- YouTube Icon (SVG) -->
-            <a href="https://youtube.com">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.42a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.42 8.6.42 8.6.42s6.88 0 8.6-.42a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.33 29 29 0 0 0-.46-5.33z"></path>
-                    <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"></polygon>
-                </svg>
-            </a>
-        </div>
-    </nav>
+<!-- Fond WebGL continu (terrain + strates + sédiments) -->
+<canvas id="scene" aria-hidden="true"></canvas>
+
+<!-- Grain -->
+<svg class="grain" aria-hidden="true">
+  <filter id="n"><feTurbulence type="fractalNoise" baseFrequency=".8" numOctaves="2"/></filter>
+  <rect width="100%" height="100%" filter="url(#n)"/>
+</svg>
+
+<!-- HUD -->
+<header class="hud">
+  <span class="brand">GEO3D</span>
+  <nav><a href="index.html">retour à la surface</a></nav>
 </header>
-    <!-- ============== FIN HEADER ============== -->
 
-    <!-- ============== DÉBUT MAIN ============== -->
-    <main>
-        <!-- Intentionally empty -- the cube-face canvas is appended
-             directly to <body> as a fixed full-viewport layer by
-             cube-face.js, same convention as threejs.js. -->
-    </main>
-    <!-- ============== FIN MAIN ============== -->
+<!-- Rail de profondeur (signature) -->
+<aside class="rail" aria-hidden="true">
+  <span class="depth-value" id="depthValue">PROF. 0 M</span>
+  <div class="track">
+    <div class="fill" id="depthFill"></div>
+    <span class="tick" style="top:25%"></span>
+    <span class="tick" style="top:50%"></span>
+    <span class="tick" style="top:75%"></span>
+  </div>
+  <span>−300 M</span>
+</aside>
 
-    <!-- ============== DÉBUT FOOTER ============== -->
-    <footer>
+<main>
 
-    </footer>
-    <!-- ============== FIN FOOTER ============== -->
+  <!-- ======== 0 M — SURFACE ======== -->
+  <section class="stratum" id="s-surface" data-depth-label="0 M — SURFACE">
+    <p class="depth-tag">0 M — SURFACE</p>
+    <h1 class="display reveal">Sous la<br>surface</h1>
+    <p class="lede">
+      GEO3D est un dispositif de recherche-création qui traduit des données
+      géophysiques de résidus miniers en expérience interactive. Ce que l'instrument mesure dans des milieux à faible contraste,
+      l'écran le rend sensible et compréhensible pour la collectivité.
+    </p>
+    <p class="scroll-cue"><span class="arrow"></span>faire défiler pour forer</p>
+  </section>
 
-    <script src="./assets/scripts/bg-dots.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="./assets/scripts/cube-face.js"></script>
+  <!-- ======== −40 M — LE PROJET (POURQUOI & MISSION) ======== -->
+  <section class="stratum" id="s-projet" data-depth-label="−40 M — LE PROJET">
+    <p class="depth-tag">−40 M — LE PROJET</p>
+    <div class="cols">
+      <div>
+        <h2 class="display reveal" style="font-size:clamp(36px,6vw,88px)">Rendre le sol lisible</h2>
+      </div>
+      <div class="why">
+        <p class="annot">POURQUOI &amp; MISSION</p>
+        <p class="lede" style="margin-top:2vh">
+          <strong>Le constat :</strong> Les méthodes traditionnelles par échantillonnage ponctuel offrent une vision limitée (quelques décimètres cubes) pour des parcs à résidus miniers s'étendant sur des centaines d'hectares.
+        </p>
+        <p class="lede" style="margin-top:1.5vh;">
+          <strong>La mission :</strong> Combiner la caractérisation géophysique multi-méthodes en continu et la création d'une plateforme numérique interactive (simulation 3D) pour assurer le transfert de connaissances, la transparence et la médiation auprès des citoyens.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======== −80 M — OBJECTIFS ======== -->
+  <section class="stratum" id="s-objectifs" data-depth-label="−80 M — OBJECTIFS">
+    <p class="depth-tag">−80 M — OBJECTIFS DE RECHERCHE</p>
+    <h2 class="display reveal" style="font-size:clamp(32px,5vw,72px)">Trois cibles</h2>
+
+    <div class="targets">
+      <!-- Tracés SVG qui se dessinent au scroll, reliant les cibles -->
+      <svg preserveAspectRatio="none" viewBox="0 0 1000 900" aria-hidden="true">
+        <path class="draw" d="M 30 40 L 30 240 L 400 300"/>
+        <path class="draw" d="M 400 340 L 400 540 L 60 600"/>
+        <path class="draw" d="M 60 640 L 60 820 L 420 860"/>
+      </svg>
+
+      <article class="target">
+        <p class="annot">OBJECTIF 1</p>
+        <h3>Caractérisation géophysique continue</h3>
+        <p>Développer une méthodologie multi-méthodes intégrée pour imager le volume
+        des parcs à résidus miniers à faible contraste physique, du drone jusqu'au sous-sol.</p>
+      </article>
+
+      <article class="target">
+        <p class="annot">OBJECTIF 2</p>
+        <h3>Médiation &amp; Plateforme interactive</h3>
+        <p>Créer un outil numérique hébergé localement combinant simulation 3D et requêtes
+        de données pour assurer un transfert de connaissances fluide et accessible aux citoyens.</p>
+      </article>
+
+      <article class="target">
+        <p class="annot">OBJECTIF 3</p>
+        <h3>Former les talents de demain (PHQ)</h3>
+        <p>Proposer un cadre de formation hautement qualifié aux normes ÉDI, combinant 
+        compétences géophysiques de pointe, éthique environnementale et nouveaux médias.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- ======== −140 M — L'ÉQUIPE ======== -->
+  <section class="stratum" id="s-equipe" data-depth-label="−140 M — L'ÉQUIPE">
+    <p class="depth-tag">−140 M — L'ÉQUIPE &amp; PARTENAIRES</p>
+    <h2 class="display reveal" style="font-size:clamp(32px,5vw,72px)">Stations de mesure</h2>
+
+    <div class="borehole">
+      <article class="station" tabindex="0">
+        <div class="row">
+          <span class="name">Prof. Li Zhen Cheng</span>
+          <span class="role">DIRECTION SCIENTIFIQUE (UQAT)</span>
+        </div>
+        <p class="detail">Supervise la modélisation géophysique, l'intégration multi-méthodes (ERT, électromagnétisme) et l'encadrement des PHQ.</p>
+      </article>
+
+      <article class="station" tabindex="0">
+        <div class="row">
+          <span class="name">Prof. François-Xavier Simon</span>
+          <span class="role">CO-DIRECTION SCIENTIFIQUE (UUS)</span>
+        </div>
+        <p class="detail">Expertise en acquisition sismique avancée (Landstreamer SeisMove®) et cotutelle internationale de recherche.</p>
+      </article>
+
+      <article class="station" tabindex="0">
+        <div class="row">
+          <span class="name">Casey Côtes-Turpin</span>
+          <span class="role">MÉDIATION &amp; ENGAGEMENT CITOYEN</span>
+        </div>
+        <p class="detail">Scénarisation pédagogique, lien avec la communauté et validation de l'interface auprès de la Ville de Rouyn-Noranda.</p>
+      </article>
+
+      <article class="station" tabindex="0">
+        <div class="row">
+          <span class="name">Delphine Grenier</span>
+          <span class="role">RECHERCHE-CRÉATION &amp; DÉVELOPPEMENT</span>
+        </div>
+        <p class="detail">Conception de l'expérience interactive, développement temps réel et direction visuelle de la plateforme 3D.</p>
+      </article>
+
+      <article class="station" tabindex="0">
+        <div class="row">
+          <span class="name">Rosalie Moreau</span>
+          <span class="role">RECHERCHE-CRÉATION &amp; DÉVELOPPEMENT</span>
+        </div>
+        <p class="detail">Architecture de données, modélisation des strates environnementales et ergonomie utilisateur (UX/UI).</p>
+      </article>
+
+      <article class="station" tabindex="0">
+        <div class="row">
+          <span class="name">Maxime Constantineau</span>
+          <span class="role">RECHERCHE-CRÉATION &amp; DÉVELOPPEMENT</span>
+        </div>
+        <p class="detail">Simulation des données géophysiques, intégration des moteurs temps réel et systèmes d'interaction du forage.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- ======== −220 M — LES DONNÉES (strate sombre) ======== -->
+  <section class="stratum" id="s-donnees" data-depth-label="−220 M — LES DONNÉES">
+    <!-- Courbes de niveau en arrière-plan -->
+    <div class="contours" aria-hidden="true">
+      <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
+        <path d="M-50 700 C 300 620, 500 760, 800 680 S 1300 600, 1500 660"/>
+        <path d="M-50 640 C 280 560, 520 700, 820 620 S 1280 540, 1500 600"/>
+        <path d="M-50 580 C 260 500, 540 640, 840 560 S 1260 480, 1500 540"/>
+        <path d="M-50 520 C 240 440, 560 580, 860 500 S 1240 420, 1500 480"/>
+      </svg>
+    </div>
+
+    <p class="depth-tag">−220 M — LES DONNÉES COLLECTÉES</p>
+    <h2 class="display reveal" style="font-size:clamp(32px,5vw,72px)">Ce que le sol répond</h2>
+
+    <div class="data-grid">
+      <div class="datum">
+        <p class="num"><span class="count" data-to="87">0</span></p>
+        <p class="label">Sites miniers abandonnés</p>
+        <p>Inventoriés en Abitibi-Témiscamingue sous la responsabilité du MRNF.</p>
+      </div>
+      <div class="datum">
+        <p class="num"><span class="count" data-to="7">0</span></p>
+        <p class="label">Méthodes géophysiques</p>
+        <p>Déployées et comparées (Sismique, ERT, Mag, Gravi, EM, GPR, Spectrométrie).</p>
+      </div>
+      <div class="datum">
+        <p class="num"><span class="count" data-to="8">0</span><sup>PHQ</sup></p>
+        <p class="label">Étudiants &amp; Chercheurs</p>
+        <p>Maitrises, doctorats et postdocs formés au sein du projet.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======== −280 M — TECHNOLOGIES ======== -->
+  <section class="stratum" id="s-techno" data-depth-label="−280 M — TECHNOLOGIES">
+    <p class="depth-tag">−280 M — TECHNOLOGIES &amp; INSTRUMENTS</p>
+    <h2 class="display reveal" style="font-size:clamp(32px,5vw,72px)">Instruments</h2>
+
+    <div class="tech-list">
+      <div class="tech"><span class="t-name">SeisMove® &amp; GEM-2</span><span class="t-for">ACQUISITION DE TERRAIN (SOL &amp; DRONE)</span></div>
+      <div class="tech"><span class="t-name">Unity / WebGL</span><span class="t-for">EXPÉRIENCE INTERACTIVE &amp; SIMULATION 3D</span></div>
+      <div class="tech"><span class="t-name">Three.js &amp; GSAP</span><span class="t-for">VISUALISATION WEB &amp; NARRATION AU SCROLL</span></div>
+    </div>
+  </section>
+
+  <!-- ======== REMONTÉE ======== -->
+  <section class="stratum" id="s-fin" data-depth-label="REMONTÉE">
+    <p class="depth-tag">REMONTÉE — RETOUR À LA SURFACE</p>
+    <h2 class="display reveal">Continuer<br>l'exploration</h2>
+    <a class="cta" href="donnees.html">analyser les données →</a>
+  </section>
+
+</main>
+
+<!-- ================= LIBS (cdnjs) ================= -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lenis/1.1.13/lenis.min.js"></script>
+
+<script>
+/* ============================================================
+   GEO3D — journal de forage
+   Modules : SmoothScroll / Scene3D / DepthHUD / Reveals
+   ============================================================ */
+(() => {
+  'use strict';
+
+  gsap.registerPlugin(ScrollTrigger);
+
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const isMobile = window.matchMedia('(max-width: 900px)').matches;
+
+  /* ---------- 1. SMOOTH SCROLL (Lenis, avec fallback natif) ---------- */
+  let lenis = null;
+  if (typeof Lenis !== 'undefined' && !reduceMotion) {
+    lenis = new Lenis({ lerp: 0.09, wheelMultiplier: 0.9 });
+    lenis.on('scroll', ScrollTrigger.update);
+    gsap.ticker.add((t) => lenis.raf(t * 1000));
+    gsap.ticker.lagSmoothing(0);
+  }
+
+  /* ---------- 2. SCÈNE THREE.JS ---------- */
+const PALETTE = {
+  paperBg: 0xd3dada, // correspond à --paper (#d3dada)
+  paperInk: 0x6b503d, // correspond à --ink (#6b503d)
+  deepBg: 0x2d1b12,  // correspond à --deep (#2d1b12)
+  deepInk: 0xd3dada, // correspond à --deep-ink (#d3dada)
+};
+
+  const canvas = document.getElementById('scene');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75)); // plafond DPR = perf
+  renderer.setSize(innerWidth, innerHeight);
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(PALETTE.paperBg);
+  scene.fog = new THREE.Fog(PALETTE.paperBg, 40, 160);
+
+  const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 400);
+
+  // -- Terrain wireframe (écho du cube de la homepage) --
+  // Bruit procédural léger : superposition de sinus, zéro dépendance.
+  const noise = (x, z) =>
+    Math.sin(x * 0.12) * 2.2 +
+    Math.cos(z * 0.09) * 1.8 +
+    Math.sin(x * 0.31 + z * 0.24) * 0.9;
+
+  const terrainGeo = new THREE.PlaneGeometry(220, 220, 84, 84);
+  terrainGeo.rotateX(-Math.PI / 2);
+  {
+    const pos = terrainGeo.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      pos.setY(i, noise(pos.getX(i), pos.getZ(i)));
+    }
+    terrainGeo.computeVertexNormals();
+  }
+  const terrainMat = new THREE.MeshBasicMaterial({
+    color: PALETTE.paperInk, wireframe: true, transparent: true, opacity: 0.16,
+  });
+  const terrain = new THREE.Mesh(terrainGeo, terrainMat);
+  scene.add(terrain);
+
+  /* -- Surface pleine : LA TEXTURE DE LA FACE DU CUBE (homepage) --
+     Shader repris de threejs.js (FACE_VERTEX/FRAGMENT_SHADER) : fresnel sur
+     les arêtes, lignes ondulantes animées, ombrage par bruit. Ici le relief
+     vient de la géométrie du terrain (uNoiseAmp = 0, pas de déplacement en
+     plus), le shader n'apporte que la « texture » de la face. Le système de
+     ripples de la version cube est laissé inerte (aucune impulsion). */
+  /* >>> RÉGLAGES DU MESH DU DESSUS <<< change ces 3 valeurs librement */
+  const MESH_COLOR = '#556b2f';   // couleur principale de la surface
+  const MESH_RIM_COLOR = '#556b2';   // accent d'arête + lignes ondulantes
+  const MESH_OPACITY = 0.8;          // 0 = transparent, 1 = plein
+  const faceTime = { value: 0 };     // uTime partagé, avancé dans tick()
+
+  const FACE_VERTEX_SHADER = `
+    uniform vec2 uUvOffset;
+    uniform vec2 uUvScale;
+    uniform float uNoiseAmp;
+    uniform float uNoiseFreq;
+    uniform vec3 uNoiseSeed;
+    varying vec3 vNormal;
+    varying vec3 vViewPosition;
+    varying vec2 vUv;
+    varying float vNoiseHeight;
+    varying vec3 vWorldPos;
+
+    float hash13(vec3 p3) {
+      p3 = fract(p3 * 0.1031);
+      p3 += dot(p3, p3.yzx + 33.33);
+      return fract((p3.x + p3.y) * p3.z);
+    }
+    float noise3(vec3 p) {
+      vec3 i = floor(p); vec3 f = fract(p);
+      f = f * f * (3.0 - 2.0 * f);
+      float n000 = hash13(i + vec3(0.0,0.0,0.0));
+      float n100 = hash13(i + vec3(1.0,0.0,0.0));
+      float n010 = hash13(i + vec3(0.0,1.0,0.0));
+      float n110 = hash13(i + vec3(1.0,1.0,0.0));
+      float n001 = hash13(i + vec3(0.0,0.0,1.0));
+      float n101 = hash13(i + vec3(1.0,0.0,1.0));
+      float n011 = hash13(i + vec3(0.0,1.0,1.0));
+      float n111 = hash13(i + vec3(1.0,1.0,1.0));
+      float nx00 = mix(n000,n100,f.x); float nx10 = mix(n010,n110,f.x);
+      float nx01 = mix(n001,n101,f.x); float nx11 = mix(n011,n111,f.x);
+      float nxy0 = mix(nx00,nx10,f.y); float nxy1 = mix(nx01,nx11,f.y);
+      return mix(nxy0,nxy1,f.z) * 2.0 - 1.0;
+    }
+    float displacementAt(vec3 worldPos) {
+      return noise3(worldPos * uNoiseFreq + uNoiseSeed) * uNoiseAmp;
+    }
+    void main() {
+      vUv = uv * uUvScale + uUvOffset;
+      vec3 worldPos = (modelMatrix * vec4(position, 1.0)).xyz;
+      vWorldPos = worldPos;
+      float rawNoise = noise3(worldPos * uNoiseFreq + uNoiseSeed);
+      vNoiseHeight = rawNoise;
+      vec3 displaced = position + normal * rawNoise * uNoiseAmp;
+      vec3 worldNormal = normalize((modelMatrix * vec4(normal, 0.0)).xyz);
+      vec3 tangent = normalize((modelMatrix * vec4(1.0,0.0,0.0,0.0)).xyz);
+      vec3 bitangent = normalize((modelMatrix * vec4(0.0,1.0,0.0,0.0)).xyz);
+      float eps = 0.03;
+      float dHu = (displacementAt(worldPos + tangent*eps) - displacementAt(worldPos - tangent*eps)) / (2.0*eps);
+      float dHv = (displacementAt(worldPos + bitangent*eps) - displacementAt(worldPos - bitangent*eps)) / (2.0*eps);
+      vec3 bumpedWorldNormal = normalize(worldNormal - dHu*tangent - dHv*bitangent);
+      vNormal = normalize((viewMatrix * vec4(bumpedWorldNormal, 0.0)).xyz);
+      vec4 mvPosition = modelViewMatrix * vec4(displaced, 1.0);
+      vViewPosition = -mvPosition.xyz;
+      gl_Position = projectionMatrix * mvPosition;
+    }
+  `;
+
+  const FACE_FRAGMENT_SHADER = `
+    uniform vec3 uBaseColor;
+    uniform vec3 uRimColor;
+    uniform float uOpacity;
+    uniform float uTime;
+    uniform vec3 uFogColor;
+    uniform float uFogNear;
+    uniform float uFogFar;
+    varying vec3 vNormal;
+    varying vec3 vViewPosition;
+    varying vec2 vUv;
+    varying float vNoiseHeight;
+    void main() {
+      vec3 viewDir = normalize(vViewPosition);
+      vec3 n = normalize(vNormal);
+      float fresnel = pow(1.0 - abs(dot(n, viewDir)), 2.2);
+      float wave = sin(vUv.y * 200.0 + sin(vUv.x * 5.0 + uTime * 0.25) * 2.5 + uTime * 0.4);
+      float lines = smoothstep(0.99, 1.0, abs(wave)) * 0.5;
+      // La couleur de base DOMINE (fresnel réduit à un simple liseré
+      // d'arête), pour que changer uBaseColor change vraiment le mesh.
+      vec3 color = mix(uBaseColor, uRimColor, fresnel * 0.3);
+      color += lines * uRimColor * 0.6;
+      float heightShade = vNoiseHeight * 0.5 + 0.5;
+      color = mix(color * 0.78, color * 1.12, heightShade); // clair/foncé, garde la teinte
+      // Brouillard linéaire, aligné sur scene.fog (near/far), pour que le
+      // lointain se fonde dans le fond comme le fil de fer et l'arrière-plan.
+      float fogFactor = smoothstep(uFogNear, uFogFar, length(vViewPosition));
+      color = mix(color, uFogColor, fogFactor);
+      gl_FragColor = vec4(color, uOpacity);
+    }
+  `;
+
+  const surfaceMat = new THREE.ShaderMaterial({
+    uniforms: {
+      uBaseColor: { value: new THREE.Color(MESH_COLOR) },
+      uRimColor: { value: new THREE.Color(MESH_RIM_COLOR) },
+      uOpacity: { value: MESH_OPACITY },
+      uTime: faceTime,
+      uUvOffset: { value: new THREE.Vector2(0, 0) },
+      uUvScale: { value: new THREE.Vector2(1, 1) },
+      uNoiseAmp: { value: 0.0 },      // relief = géométrie du terrain, pas le shader
+      uNoiseFreq: { value: 0.03 },    // fréquence basse = ombrage doux
+      uNoiseSeed: { value: new THREE.Vector3(12.3, 45.6, 78.9) },
+      uFogColor: { value: new THREE.Color(PALETTE.paperBg) },
+      uFogNear: { value: 40.0 },      // = scene.fog.near
+      uFogFar: { value: 160.0 }       // = scene.fog.far
+    },
+    vertexShader: FACE_VERTEX_SHADER,
+    fragmentShader: FACE_FRAGMENT_SHADER,
+    side: THREE.FrontSide,
+    transparent: true,   // requis pour que uOpacity < 1 fasse effet
+    depthWrite: false    // évite que la surface translucide masque le fil de fer/strates derrière
+  });
+  const surface = new THREE.Mesh(terrainGeo, surfaceMat);
+  scene.add(surface);
+
+  // -- Strates fantômes : plans wireframe traversés pendant la descente --
+  const strataMat = new THREE.MeshBasicMaterial({
+    color: PALETTE.paperInk, wireframe: true, transparent: true, opacity: 0.06,
+  });
+  const strataDepths = [-40, -85, -135, -190, -245];
+  strataDepths.forEach((y) => {
+    const g = new THREE.PlaneGeometry(260, 260, 18, 18);
+    g.rotateX(-Math.PI / 2);
+    const m = new THREE.Mesh(g, strataMat);
+    m.position.y = y;
+    scene.add(m);
+  });
+
+  // -- Sédiments : colonne de particules autour du forage --
+  const P_COUNT = isMobile ? 250 : 500;
+  const pGeo = new THREE.BufferGeometry();
+  const pArr = new Float32Array(P_COUNT * 3);
+  for (let i = 0; i < P_COUNT; i++) {
+    pArr[i * 3]     = (Math.random() - 0.5) * 110;   // x
+    pArr[i * 3 + 1] = 15 - Math.random() * 300;      // y : de la surface au fond
+    pArr[i * 3 + 2] = (Math.random() - 0.5) * 110;   // z
+  }
+  pGeo.setAttribute('position', new THREE.BufferAttribute(pArr, 3));
+  const pMat = new THREE.PointsMaterial({
+    color: PALETTE.paperInk, size: 0.5, transparent: true, opacity: 0.35,
+    sizeAttenuation: true,
+  });
+  const particles = new THREE.Points(pGeo, pMat);
+  scene.add(particles);
+
+  /* ---------- 3. ÉTAT DE SCROLL / CAMÉRA ---------- */
+  const state = {
+    progress: 0,       // 0 → 1 sur toute la page
+    themeMix: 0,       // 0 = papier, 1 = profond
+    mouseX: 0, mouseY: 0,
+  };
+
+  ScrollTrigger.create({
+    trigger: document.body,
+    start: 'top top',
+    end: 'bottom bottom',
+    onUpdate: (self) => { state.progress = self.progress; },
+  });
+
+  // Parallaxe souris — normalisée [-1, 1], lissée dans la boucle
+  addEventListener('pointermove', (e) => {
+    state.mouseX = (e.clientX / innerWidth) * 2 - 1;
+    state.mouseY = (e.clientY / innerHeight) * 2 - 1;
+  }, { passive: true });
+
+  // Inversion du thème dans la strate données
+  const cBg = new THREE.Color(), cInk = new THREE.Color();
+  const paperBg = new THREE.Color(PALETTE.paperBg), deepBg = new THREE.Color(PALETTE.deepBg);
+  const paperInk = new THREE.Color(PALETTE.paperInk), deepInk = new THREE.Color(PALETTE.deepInk);
+
+  ScrollTrigger.create({
+    trigger: '#s-donnees',
+    start: 'top 60%',
+    end: 'bottom 40%',
+    onEnter:     () => setTheme(1),
+    onLeave:     () => setTheme(0),
+    onEnterBack: () => setTheme(1),
+    onLeaveBack: () => setTheme(0),
+  });
+  function setTheme(v) {
+    document.body.classList.toggle('is-deep', v === 1);
+    gsap.to(state, { themeMix: v, duration: 1.2, ease: 'power2.out', overwrite: true });
+  }
+
+  /* ---------- 4. BOUCLE DE RENDU ---------- */
+  let smX = 0, smY = 0;
+  const clock = new THREE.Clock();
+  let running = true;
+  document.addEventListener('visibilitychange', () => {
+    running = !document.hidden; // pause quand l'onglet est caché
+    if (running) tick();
+  });
+
+  function tick() {
+    if (!running) return;
+    requestAnimationFrame(tick);
+    const t = clock.getElapsedTime();
+    faceTime.value = t; // anime les lignes ondulantes de la texture de face
+
+    // Descente : la caméra suit le scroll de +26 (au-dessus du terrain) à −265
+    const camY = 26 - state.progress * 291;
+    smX += (state.mouseX - smX) * 0.05;
+    smY += (state.mouseY - smY) * 0.05;
+
+    camera.position.set(smX * 3.5, camY + smY * -1.5, 48);
+    camera.lookAt(0, camY - 10, 0);
+
+    // Sédiments : dérive lente + attraction très légère vers le curseur
+    particles.rotation.y = t * 0.02;
+    particles.position.x += ((smX * 4) - particles.position.x) * 0.02;
+    particles.position.z += ((smY * 3) - particles.position.z) * 0.02;
+
+    // Lerp des couleurs de la scène selon le thème
+    cBg.copy(paperBg).lerp(deepBg, state.themeMix);
+    cInk.copy(paperInk).lerp(deepInk, state.themeMix);
+    scene.background.copy(cBg);
+    scene.fog.color.copy(cBg);
+    surfaceMat.uniforms.uFogColor.value.copy(cBg); // même brouillard que la scène
+    terrainMat.color.copy(cInk);
+    strataMat.color.copy(cInk);
+    pMat.color.copy(cInk);
+
+    renderer.render(scene, camera);
+  }
+  tick();
+
+  addEventListener('resize', () => {
+    camera.aspect = innerWidth / innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+  });
+
+  /* ---------- 5. HUD DE PROFONDEUR ---------- */
+  const depthValue = document.getElementById('depthValue');
+  const depthFill = document.getElementById('depthFill');
+  const MAX_DEPTH = 300;
+  gsap.ticker.add(() => {
+    const d = Math.round(state.progress * MAX_DEPTH);
+    depthValue.textContent = d === 0 ? 'PROF. 0 M' : `PROF. \u2212${d} M`;
+    depthFill.style.height = (state.progress * 100).toFixed(1) + '%';
+  });
+
+  /* ---------- 6. SPLIT DE TEXTE MAISON ---------- */
+  // Découpe en mots (.w, insécables) puis en caractères (.ch) — préserve
+  // le retour à la ligne naturel, contrairement à un split naïf.
+  function splitChars(el) {
+    const frag = document.createDocumentFragment();
+    el.childNodes.forEach((node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        node.textContent.split(/(\s+)/).forEach((token) => {
+          if (!token) return;
+          if (/^\s+$/.test(token)) { frag.append(' '); return; }
+          const w = document.createElement('span');
+          w.className = 'w';
+          [...token].forEach((c) => {
+            const s = document.createElement('span');
+            s.className = 'ch';
+            s.textContent = c;
+            w.append(s);
+          });
+          frag.append(w);
+        });
+      } else {
+        frag.append(node.cloneNode(true)); // conserve les <br>
+      }
+    });
+    el.replaceChildren(frag);
+    return el.querySelectorAll('.ch');
+  }
+
+  /* ---------- 7. REVEALS AU SCROLL ---------- */
+  if (!reduceMotion) {
+    // Titres : caractères qui montent
+    document.querySelectorAll('.reveal').forEach((el) => {
+      const chars = splitChars(el);
+      gsap.from(chars, {
+        yPercent: 115, rotate: 3, opacity: 0,
+        duration: 1.1, ease: 'expo.out',
+        stagger: { each: 0.018, from: 'start' },
+        scrollTrigger: { trigger: el, start: 'top 82%' },
+      });
+    });
+
+    // Blocs de texte : fondu discret
+    gsap.utils.toArray('.lede, .target, .station, .datum, .tech').forEach((el) => {
+      gsap.from(el, {
+        y: 36, opacity: 0, duration: 1, ease: 'power3.out',
+        scrollTrigger: { trigger: el, start: 'top 88%' },
+      });
+    });
+
+    // Tracés SVG qui se dessinent (scrub = liés à la profondeur)
+// Tracés SVG animés séquentiellement au scroll
+const paths = document.querySelectorAll('#s-objectifs .draw');
+if (paths.length > 0) {
+  // 1. Initialiser le strokeDasharray / offset sur chaque tracé
+  paths.forEach((path) => {
+    const len = path.getTotalLength();
+    gsap.set(path, {
+      strokeDasharray: len,
+      strokeDashoffset: len,
+    });
+  });
+
+  // 2. Créer une Timeline reliée au scroll de la section
+  const drawTl = gsap.timeline({
+    scrollTrigger: {
+      trigger: '#s-objectifs',
+      start: 'top 40%',   // Début du dessin
+      end: 'bottom 80%',  // Fin lorsque toutes les lignes sont tracées
+      scrub: 0.8,         // Ajuste la réactivité au défilement
+    },
+  });
+
+  // 3. Empiler le dessin de chaque ligne séquentiellement
+  paths.forEach((path) => {
+    drawTl.to(path, {
+      strokeDashoffset: 0,
+      ease: 'none',
+    });
+  });
+}
+
+    // Compteurs de données
+    document.querySelectorAll('.count').forEach((el) => {
+      const to = +el.dataset.to;
+      const obj = { v: 0 };
+      gsap.to(obj, {
+        v: to, duration: 2, ease: 'power2.out',
+        scrollTrigger: { trigger: el, start: 'top 85%' },
+        onUpdate: () => {
+          el.textContent = Math.round(obj.v).toLocaleString('fr-CA').replace(/\u00a0/g, ' ');
+        },
+      });
+    });
+  } else {
+    // Reduced motion : tout visible, compteurs à leur valeur finale
+    document.querySelectorAll('.count').forEach((el) => {
+      el.textContent = (+el.dataset.to).toLocaleString('fr-CA');
+    });
+  }
+})();
+</script>
 </body>
 </html>

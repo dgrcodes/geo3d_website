@@ -1,809 +1,311 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GEO3D — Découvrir le Projet</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --geo-bg: #D8DCDD;
-    --geo-dark: #0A0A0A;
-    --geo-mid: #2A2A2A;
-    --geo-light: #E8E8E8;
-    --geo-accent: #1E3A2F;
-    --geo-warm: #8B7355;
-    --geo-earth-1: #C4A882;
-    --geo-earth-2: #A68B6B;
-    --geo-earth-3: #7A5E3E;
-    --geo-earth-4: #4A3520;
-    --geo-earth-5: #2A1C0E;
-    --geo-grass: #3A6B2E;
-    --geo-grass-light: #5A8B4E;
-    --geo-blue: #4A7C8A;
-  }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GEO3D — Explorer les données</title>
+    <!-- Ton style.css global (variables --cube-band-*, --nav-*, etc.) -->
+    <link rel="stylesheet" href="./style.css">
+    <style>
+        /* ===== Explorer les données — styles propres à cette page ===== */
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: var(--bg-color, #d7dcda);
+            font-family: sans-serif;
+        }
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+        .bg-dots {
+            position: fixed;
+            inset: -40px;
+            pointer-events: none;
+            z-index: 0;
+        }
 
-  html { overflow: hidden; height: 100%; }
+        header.donnees-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 18px 28px;
+            z-index: 5;
+        }
+        header.donnees-header .brand {
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            color: var(--nav-label-color, #2a2a2a);
+            text-decoration: none;
+            font-size: 0.95rem;
+        }
+        header.donnees-header .section {
+            font-size: 0.72rem;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            color: var(--nav-line-color, #3d2b1f);
+            opacity: 0.75;
+        }
 
-  body {
-    font-family: 'Space Grotesk', sans-serif;
-    background: var(--geo-bg);
-    color: var(--geo-dark);
-    overflow: hidden;
-    height: 100%;
-    cursor: crosshair;
-  }
+        .donnees-ui {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 4;
+        }
+        .donnees-ui > * { pointer-events: auto; }
 
-  .scroll-container {
-    position: fixed;
-    top: 0; left: 0;
-    height: 100vh;
-    display: flex;
-    flex-wrap: nowrap;
-    will-change: transform;
-  }
+        .donnees-caption {
+            position: fixed;
+            left: 28px;
+            bottom: 24px;
+            font-size: 0.72rem;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--nav-label-color, #2a2a2a);
+            opacity: 1;
+            transition: opacity 0.6s ease;
+            pointer-events: none;
+        }
+        .donnees-caption-num {
+            font-weight: 700;
+            margin-right: 6px;
+        }
 
-  #bg-canvas {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    z-index: 0;
-    pointer-events: none;
-  }
+        .donnees-hover-tag {
+            position: fixed;
+            padding: 4px 10px;
+            font-size: 0.72rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--nav-label-color, #2a2a2a);
+            background: color-mix(in srgb, var(--bg-color, #d7dcda) 82%, transparent);
+            border: 1px solid var(--nav-line-color, #3d2b1f);
+            border-radius: 2px;
+            white-space: nowrap;
+            transition: opacity 0.25s ease;
+            pointer-events: none;
+            z-index: 6;
+        }
+        .donnees-hover-tag span {
+            font-weight: 700;
+            margin-right: 6px;
+            opacity: 0.6;
+        }
 
-  .nav {
-    position: fixed;
-    top: 0; left: 0; right: 0;
-    z-index: 100;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.5rem 3rem;
-    mix-blend-mode: difference;
-    pointer-events: none;
-  }
-  .nav-logo {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.85rem;
-    font-weight: 500;
-    letter-spacing: 0.15em;
-    color: #fff;
-    text-transform: uppercase;
-    pointer-events: auto;
-  }
-  .nav-links {
-    display: flex;
-    gap: 2.5rem;
-    list-style: none;
-    pointer-events: auto;
-  }
-  .nav-links a {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.75rem;
-    font-weight: 400;
-    letter-spacing: 0.1em;
-    color: rgba(255,255,255,0.6);
-    text-decoration: none;
-    text-transform: uppercase;
-    transition: color 0.3s;
-    position: relative;
-  }
-  .nav-links a:hover, .nav-links a.active { color: #fff; }
-  .nav-links a::after {
-    content: '';
-    position: absolute;
-    bottom: -4px; left: 0;
-    width: 0; height: 1px;
-    background: #fff;
-    transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  .nav-links a:hover::after, .nav-links a.active::after { width: 100%; }
+        .donnees-callout {
+            position: fixed;
+            font-size: 0.78rem;
+            line-height: 1.5;
+            color: var(--nav-label-color, #2a2a2a);
+            padding: 8px 12px;
+            border-left: 1px solid var(--nav-line-color, #3d2b1f);
+            background: color-mix(in srgb, var(--bg-color, #d7dcda) 65%, transparent);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+            pointer-events: none;
+            max-width: 240px;
+        }
+        .donnees-callout span {
+            display: inline-block;
+            font-size: 0.62rem;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            opacity: 0.6;
+            margin-right: 8px;
+        }
+        .donnees-callout-main h2 {
+            margin: 6px 0 8px;
+            font-size: 1.15rem;
+            letter-spacing: 0.02em;
+        }
+        .donnees-callout-main p {
+            margin: 0;
+            opacity: 0.85;
+        }
+        .donnees-callout-eyebrow {
+            font-size: 0.62rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            opacity: 0.55;
+        }
 
-  .scroll-progress {
-    position: fixed;
-    bottom: 2rem;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 100;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.65rem;
-    letter-spacing: 0.2em;
-    opacity: 0.4;
-    text-transform: uppercase;
-    mix-blend-mode: difference;
-    color: #fff;
-  }
-  .progress-bar {
-    width: 120px;
-    height: 1px;
-    background: rgba(255,255,255,0.2);
-    position: relative;
-    overflow: hidden;
-  }
-  .progress-fill {
-    position: absolute;
-    top: 0; left: 0;
-    height: 100%;
-    width: 0%;
-    background: #fff;
-    transition: width 0.1s linear;
-  }
+        .donnees-back {
+            position: fixed;
+            left: 50%;
+            bottom: 26px;
+            transform: translateX(-50%);
+            background: none;
+            border: 1px solid var(--nav-line-color, #3d2b1f);
+            border-radius: 2px;
+            padding: 8px 18px;
+            font-size: 0.74rem;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: var(--nav-label-color, #2a2a2a);
+            cursor: pointer;
+            transition: opacity 0.5s ease, background 0.25s ease;
+        }
+        .donnees-back:hover {
+            background: color-mix(in srgb, var(--nav-line-color, #3d2b1f) 12%, transparent);
+        }
 
-  .panel {
-    position: relative;
-    z-index: 2;
-    width: 100vw;
-    height: 100vh;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0 6rem;
-  }
+        /* ===== Anomaly list (side panel of buttons) ===== */
+        .donnees-list {
+            position: fixed;
+            top: 84px;
+            right: 28px;
+            width: 268px;
+            max-height: calc(100vh - 140px);
+            display: flex;
+            flex-direction: column;
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .donnees-list.is-hidden {
+            opacity: 0;
+            transform: translateX(16px);
+            pointer-events: none;
+        }
+        .donnees-list-head {
+            font-size: 0.62rem;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            color: var(--nav-label-color, #2a2a2a);
+            opacity: 0.6;
+            padding: 0 4px 8px;
+            border-bottom: 1px solid color-mix(in srgb, var(--nav-line-color, #3d2b1f) 35%, transparent);
+            margin-bottom: 6px;
+        }
+        .donnees-list-items {
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 2px;
+        }
+        .donnees-list-item {
+            border-bottom: 1px solid color-mix(in srgb, var(--nav-line-color, #3d2b1f) 16%, transparent);
+        }
+        .donnees-list-btn {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            background: none;
+            border: none;
+            padding: 9px 4px;
+            cursor: pointer;
+            text-align: left;
+            color: var(--nav-label-color, #2a2a2a);
+            font-size: 0.82rem;
+            letter-spacing: 0.01em;
+            transition: background 0.2s ease;
+        }
+        .donnees-list-btn:hover {
+            background: color-mix(in srgb, var(--nav-line-color, #3d2b1f) 8%, transparent);
+        }
+        .donnees-list-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex: 0 0 auto;
+            box-shadow: 0 0 6px 1px currentColor;
+        }
+        .donnees-list-num {
+            font-weight: 700;
+            opacity: 0.55;
+            font-size: 0.72rem;
+            font-variant-numeric: tabular-nums;
+        }
+        .donnees-list-title {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .donnees-list-caret {
+            opacity: 0.5;
+            font-weight: 700;
+            transition: transform 0.25s ease;
+        }
+        .donnees-list-item.is-open .donnees-list-caret {
+            transform: rotate(45deg);
+        }
+        /* Collapsed by default; expands when its row carries .is-open. The
+           0fr -> 1fr grid-row trick animates height with a single wrapper
+           child (.donnees-list-detail-inner) that clips the overflow. */
+        .donnees-list-detail {
+            display: grid;
+            grid-template-rows: 0fr;
+            transition: grid-template-rows 0.3s ease, opacity 0.3s ease;
+            opacity: 0;
+        }
+        .donnees-list-item.is-open .donnees-list-detail {
+            grid-template-rows: 1fr;
+            opacity: 1;
+        }
+        .donnees-list-detail-inner {
+            min-height: 0;
+            overflow: hidden;
+        }
+        .donnees-list-desc {
+            margin: 0 4px 10px;
+            font-size: 0.74rem;
+            line-height: 1.5;
+            opacity: 0.85;
+            color: var(--nav-label-color, #2a2a2a);
+        }
+        .donnees-list-meta {
+            margin: 0 4px 10px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px 12px;
+        }
+        .donnees-list-meta div { min-height: 0; overflow: visible; }
+        .donnees-list-meta dt {
+            font-size: 0.56rem;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            opacity: 0.55;
+            margin-bottom: 2px;
+        }
+        .donnees-list-meta dd {
+            margin: 0;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .donnees-list-explore {
+            margin: 0 4px 12px;
+            background: none;
+            border: 1px solid var(--nav-line-color, #3d2b1f);
+            border-radius: 2px;
+            padding: 7px 12px;
+            font-size: 0.68rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--nav-label-color, #2a2a2a);
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+        .donnees-list-explore:hover {
+            background: color-mix(in srgb, var(--nav-line-color, #3d2b1f) 12%, transparent);
+        }
 
-  .hero-panel {
-    width: 100vw;
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    position: relative;
-  }
-  .hero-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.7rem;
-    font-weight: 400;
-    letter-spacing: 0.25em;
-    color: var(--geo-mid);
-    opacity: 0.5;
-    margin-bottom: 2rem;
-    text-transform: uppercase;
-  }
-  .hero-title {
-    font-size: clamp(3rem, 8vw, 7rem);
-    font-weight: 300;
-    line-height: 1.05;
-    text-align: center;
-    letter-spacing: -0.03em;
-    color: var(--geo-dark);
-    max-width: 900px;
-  }
-  .hero-title span {
-    display: block;
-    font-weight: 700;
-    color: var(--geo-accent);
-  }
-  .hero-sub {
-    font-size: 1.1rem;
-    font-weight: 300;
-    color: var(--geo-mid);
-    opacity: 0.6;
-    margin-top: 2rem;
-    max-width: 500px;
-    text-align: center;
-    line-height: 1.6;
-  }
+        @media (max-width: 760px) {
+            .donnees-list { display: none; }
+        }
 
-  .content-panel {
-    width: 100vw;
-    height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6rem;
-    padding: 0 8rem;
-    position: relative;
-  }
-  .content-visual {
-    flex: 1;
-    max-width: 500px;
-    height: 500px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-  }
-  .content-text {
-    flex: 1;
-    max-width: 520px;
-    position: relative;
-    z-index: 5;
-  }
-
-  .globe-visual {
-    width: 400px;
-    height: 400px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .globe-svg {
-    width: 100%;
-    height: 100%;
-    animation: globeFloat 6s ease-in-out infinite;
-  }
-  @keyframes globeFloat {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-15px); }
-  }
-
-  .data-visual {
-    width: 400px;
-    height: 400px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .data-grid {
-    width: 100%;
-    height: 100%;
-    position: relative;
-  }
-  .data-point {
-    position: absolute;
-    width: 3px;
-    height: 3px;
-    background: var(--geo-dark);
-    border-radius: 50%;
-    opacity: 0.15;
-    animation: dataPulse 3s ease-in-out infinite;
-  }
-  @keyframes dataPulse {
-    0%, 100% { opacity: 0.1; transform: scale(1); }
-    50% { opacity: 0.4; transform: scale(1.5); }
-  }
-
-  .network-visual {
-    width: 400px;
-    height: 400px;
-  }
-  .network-canvas {
-    width: 100%;
-    height: 100%;
-  }
-
-  .deep-panel {
-    width: 100vw;
-    height: 100vh;
-    background: var(--geo-dark);
-    color: var(--geo-light);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    position: relative;
-    overflow: hidden;
-  }
-  .deep-panel::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-image: 
-      radial-gradient(circle at 20% 80%, rgba(58,107,46,0.08) 0%, transparent 50%),
-      radial-gradient(circle at 80% 20%, rgba(74,124,138,0.06) 0%, transparent 50%);
-    pointer-events: none;
-  }
-  .deep-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.7rem;
-    letter-spacing: 0.25em;
-    color: rgba(255,255,255,0.3);
-    text-transform: uppercase;
-    margin-bottom: 2rem;
-    position: relative;
-    z-index: 2;
-  }
-  .deep-title {
-    font-size: clamp(2.5rem, 6vw, 5rem);
-    font-weight: 300;
-    line-height: 1.1;
-    text-align: center;
-    max-width: 800px;
-    margin-bottom: 3rem;
-    position: relative;
-    z-index: 2;
-  }
-  .deep-title span {
-    font-weight: 700;
-    color: var(--geo-grass-light);
-  }
-  .deep-body {
-    font-size: 1.1rem;
-    font-weight: 300;
-    line-height: 1.8;
-    text-align: center;
-    max-width: 600px;
-    color: rgba(255,255,255,0.5);
-    margin-bottom: 4rem;
-    position: relative;
-    z-index: 2;
-  }
-  .deep-cta {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.8rem;
-    font-weight: 500;
-    letter-spacing: 0.15em;
-    color: var(--geo-dark);
-    background: var(--geo-light);
-    padding: 1.2rem 2.5rem;
-    text-decoration: none;
-    text-transform: uppercase;
-    border: none;
-    cursor: pointer;
-    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-    position: relative;
-    z-index: 2;
-  }
-  .deep-cta:hover {
-    background: var(--geo-grass-light);
-    color: var(--geo-dark);
-    transform: translateY(-2px);
-  }
-
-  .strata-tag {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.7rem;
-    font-weight: 400;
-    letter-spacing: 0.2em;
-    color: var(--geo-mid);
-    opacity: 0.4;
-    text-transform: uppercase;
-    margin-bottom: 1.5rem;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-  .strata-tag::before {
-    content: '';
-    width: 24px;
-    height: 1px;
-    background: var(--geo-mid);
-    opacity: 0.4;
-  }
-  .strata-title {
-    font-size: clamp(2rem, 4vw, 3.2rem);
-    font-weight: 500;
-    line-height: 1.15;
-    letter-spacing: -0.02em;
-    margin-bottom: 1.5rem;
-    color: var(--geo-dark);
-  }
-  .strata-body {
-    font-size: 1rem;
-    font-weight: 300;
-    line-height: 1.7;
-    color: var(--geo-mid);
-    opacity: 0.75;
-    margin-bottom: 2rem;
-  }
-  .strata-cta {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.75rem;
-    font-weight: 500;
-    letter-spacing: 0.15em;
-    color: var(--geo-dark);
-    text-decoration: none;
-    text-transform: uppercase;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem 0;
-    position: relative;
-    transition: gap 0.3s;
-  }
-  .strata-cta::after {
-    content: '→';
-    font-size: 1rem;
-    transition: transform 0.3s;
-  }
-  .strata-cta:hover { gap: 1.25rem; }
-  .strata-cta:hover::after { transform: translateX(4px); }
-
-  .footer {
-    position: fixed;
-    bottom: 0; left: 0; right: 0;
-    z-index: 100;
-    padding: 1.5rem 3rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    mix-blend-mode: difference;
-    pointer-events: none;
-  }
-  .footer-left {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.65rem;
-    color: rgba(255,255,255,0.4);
-    letter-spacing: 0.1em;
-  }
-  .footer-right {
-    display: flex;
-    gap: 2rem;
-    pointer-events: auto;
-  }
-  .footer-right a {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.65rem;
-    color: rgba(255,255,255,0.4);
-    text-decoration: none;
-    letter-spacing: 0.1em;
-    transition: color 0.3s;
-  }
-  .footer-right a:hover { color: rgba(255,255,255,0.8); }
-
-  .reveal {
-    opacity: 0;
-    transform: translateY(30px);
-    transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  .reveal.visible {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  @media (max-width: 900px) {
-    .content-panel { flex-direction: column; gap: 2rem; padding: 4rem 2rem; }
-    .content-visual, .globe-visual, .data-visual, .network-visual {
-      height: 250px; width: 100%; max-width: 300px;
-    }
-    .nav-links { display: none; }
-    .footer { display: none; }
-  }
-</style>
+        @media (prefers-reduced-motion: reduce) {
+            .donnees-callout, .donnees-hover-tag, .donnees-back,
+            .donnees-list, .donnees-list-detail, .donnees-list-caret { transition: none; }
+        }
+    </style>
 </head>
 <body>
+    <header class="donnees-header">
+        <a class="brand" href="./index.html">GEO3D</a>
+        <div class="section">explorer les données</div>
+    </header>
 
-<canvas id="bg-canvas"></canvas>
-
-<nav class="nav">
-  <div class="nav-logo">GEO3D</div>
-  <ul class="nav-links">
-    <li><a href="#">explorer le lab</a></li>
-    <li><a href="#" class="active">découvrir le projet</a></li>
-    <li><a href="#">analyser les données</a></li>
-  </ul>
-</nav>
-
-<div class="scroll-progress">
-  <span>Scroll</span>
-  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
-  <span id="progressText">0%</span>
-</div>
-
-<div class="scroll-container" id="scrollContainer">
-
-  <section class="panel hero-panel" id="hero">
-    <div class="hero-label reveal">01 — Le Projet</div>
-    <h1 class="hero-title reveal">
-      Visualiser le sous-sol<br>en trois dimensions
-      <span>pour mieux décider</span>
-    </h1>
-    <p class="hero-sub reveal">
-      GEO3D révolutionne l'analyse géologique en combinant modélisation 3D, données satellites et intelligence artificielle pour une compréhension profonde du terrain.
-    </p>
-  </section>
-
-  <section class="panel content-panel" id="vision">
-    <div class="content-visual">
-      <div class="globe-visual">
-        <svg class="globe-svg" viewBox="0 0 400 400" fill="none">
-          <defs>
-            <radialGradient id="globeGrad" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stop-color="rgba(58,107,46,0.1)"/>
-              <stop offset="100%" stop-color="transparent"/>
-            </radialGradient>
-          </defs>
-          <circle cx="200" cy="200" r="140" stroke="rgba(0,0,0,0.08)" stroke-width="0.5" fill="url(#globeGrad)"/>
-          <ellipse cx="200" cy="200" rx="140" ry="30" stroke="rgba(0,0,0,0.06)" stroke-width="0.5" fill="none"/>
-          <ellipse cx="200" cy="200" rx="30" ry="140" stroke="rgba(0,0,0,0.06)" stroke-width="0.5" fill="none"/>
-          <ellipse cx="200" cy="200" rx="140" ry="60" stroke="rgba(0,0,0,0.06)" stroke-width="0.5" fill="none" transform="rotate(30 200 200)"/>
-          <ellipse cx="200" cy="200" rx="140" ry="60" stroke="rgba(0,0,0,0.06)" stroke-width="0.5" fill="none" transform="rotate(-30 200 200)"/>
-          <ellipse cx="200" cy="200" rx="140" ry="100" stroke="rgba(0,0,0,0.06)" stroke-width="0.5" fill="none" transform="rotate(60 200 200)"/>
-          <ellipse cx="200" cy="200" rx="140" ry="100" stroke="rgba(0,0,0,0.06)" stroke-width="0.5" fill="none" transform="rotate(-60 200 200)"/>
-          <ellipse cx="200" cy="200" rx="180" ry="20" stroke="rgba(0,0,0,0.1)" stroke-width="0.8" fill="none" transform="rotate(-15 200 200)"/>
-          <circle cx="200" cy="60" r="2" fill="rgba(58,107,46,0.4)"/>
-          <circle cx="340" cy="200" r="2" fill="rgba(58,107,46,0.4)"/>
-          <circle cx="200" cy="340" r="2" fill="rgba(58,107,46,0.4)"/>
-          <circle cx="60" cy="200" r="2" fill="rgba(58,107,46,0.4)"/>
-          <circle cx="280" cy="120" r="1.5" fill="rgba(0,0,0,0.2)"/>
-          <circle cx="120" cy="280" r="1.5" fill="rgba(0,0,0,0.2)"/>
-        </svg>
-      </div>
-    </div>
-    <div class="content-text">
-      <div class="strata-tag reveal">02 — Vision</div>
-      <h2 class="strata-title reveal">Une vision globale du sous-sol terrestre</h2>
-      <p class="strata-body reveal">
-        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-      </p>
-      <a href="#" class="strata-cta reveal">Explorer la vision →</a>
-    </div>
-  </section>
-
-  <section class="panel content-panel" id="data">
-    <div class="content-text">
-      <div class="strata-tag reveal">03 — Données</div>
-      <h2 class="strata-title reveal">Des données précises à chaque couche</h2>
-      <p class="strata-body reveal">
-        Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium.
-      </p>
-      <a href="#" class="strata-cta reveal">Voir les métriques →</a>
-    </div>
-    <div class="content-visual">
-      <div class="data-visual">
-        <div class="data-grid" id="dataGrid"></div>
-      </div>
-    </div>
-  </section>
-
-  <section class="panel content-panel" id="tech">
-    <div class="content-visual">
-      <div class="network-visual">
-        <canvas class="network-canvas" id="networkCanvas"></canvas>
-      </div>
-    </div>
-    <div class="content-text">
-      <div class="strata-tag reveal">04 — Technologie</div>
-      <h2 class="strata-title reveal">Intelligence artificielle au service de la géologie</h2>
-      <p class="strata-body reveal">
-        Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt.
-      </p>
-      <a href="#" class="strata-cta reveal">Découvrir l'IA →</a>
-    </div>
-  </section>
-
-  <section class="panel deep-panel" id="deep">
-    <div class="deep-label reveal">05 — En Profondeur</div>
-    <h2 class="deep-title reveal">
-      Plongez dans les données<br><span>comme jamais auparavant</span>
-    </h2>
-    <p class="deep-body reveal">
-      At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident.
-    </p>
-    <a href="#" class="deep-cta reveal">Commencer l'exploration</a>
-  </section>
-
-</div>
-
-<footer class="footer">
-  <div class="footer-left">© 2026 GEO3D</div>
-  <div class="footer-right">
-    <a href="#">Mentions légales</a>
-    <a href="#">Contact</a>
-    <a href="#">LinkedIn</a>
-  </div>
-</footer>
-
-<script>
-  // Background Canvas: Dot Grid
-  const canvas = document.getElementById('bg-canvas');
-  const ctx = canvas.getContext('2d');
-  let mouseX = 0, mouseY = 0;
-  let time = 0;
-
-  function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-  }
-  resize();
-  window.addEventListener('resize', resize);
-  window.addEventListener('mousemove', (e) => {
-    mouseX = e.clientX;
-    mouseY = e.clientY;
-  });
-
-  function drawGrid() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const spacing = 40;
-    const rows = Math.ceil(canvas.height / spacing) + 1;
-    const cols = Math.ceil(canvas.width / spacing) + 1;
-
-    for (let y = 0; y < rows; y++) {
-      for (let x = 0; x < cols; x++) {
-        const px = x * spacing;
-        const py = y * spacing;
-        const dx = px - mouseX;
-        const dy = py - mouseY;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        const maxDist = 250;
-        const influence = Math.max(0, 1 - dist / maxDist);
-        const offsetX = (dx / dist) * influence * 15 || 0;
-        const offsetY = (dy / dist) * influence * 15 || 0;
-        const size = 1.2 + influence * 1.5;
-        const alpha = 0.08 + influence * 0.15;
-
-        ctx.beginPath();
-        ctx.arc(px + offsetX, py + offsetY, size, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(0,0,0,' + alpha + ')';
-        ctx.fill();
-      }
-    }
-
-    ctx.strokeStyle = 'rgba(0,0,0,0.03)';
-    ctx.lineWidth = 0.5;
-    for (let i = 0; i < 8; i++) {
-      ctx.beginPath();
-      const yBase = canvas.height * 0.3 + i * 60;
-      for (let x = 0; x < canvas.width; x += 2) {
-        const wave = Math.sin((x * 0.003) + (i * 0.5) + time * 0.5) * 15;
-        const y = yBase + wave;
-        if (x === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.stroke();
-    }
-  }
-
-  function animate() {
-    time += 0.016;
-    drawGrid();
-    requestAnimationFrame(animate);
-  }
-  animate();
-
-  // Horizontal Scroll + Parallax
-  const scrollContainer = document.getElementById('scrollContainer');
-  const progressFill = document.getElementById('progressFill');
-  const progressText = document.getElementById('progressText');
-  let scrollX = 0;
-  let targetScrollX = 0;
-
-  function getScrollWidth() {
-    return scrollContainer.scrollWidth - window.innerWidth;
-  }
-
-  window.addEventListener('wheel', (e) => {
-    e.preventDefault();
-    targetScrollX += e.deltaY;
-    targetScrollX = Math.max(0, Math.min(targetScrollX, getScrollWidth()));
-  }, { passive: false });
-
-  let touchStartX = 0;
-  let touchStartScroll = 0;
-  window.addEventListener('touchstart', (e) => {
-    touchStartX = e.touches[0].clientX;
-    touchStartScroll = targetScrollX;
-  });
-  window.addEventListener('touchmove', (e) => {
-    const dx = touchStartX - e.touches[0].clientX;
-    targetScrollX = touchStartScroll + dx;
-    targetScrollX = Math.max(0, Math.min(targetScrollX, getScrollWidth()));
-  });
-
-  const parallaxLayers = [
-    { selector: '.hero-title', speed: 0.3 },
-    { selector: '.hero-sub', speed: 0.5 },
-    { selector: '.hero-label', speed: 0.2 },
-    { selector: '.content-text', speed: 0.4 },
-    { selector: '.content-visual', speed: 0.15 },
-    { selector: '.deep-title', speed: 0.35 },
-    { selector: '.deep-body', speed: 0.5 },
-    { selector: '.deep-label', speed: 0.2 },
-    { selector: '.deep-cta', speed: 0.6 },
-  ];
-
-  function lerp(start, end, factor) {
-    return start + (end - start) * factor;
-  }
-
-  function updateParallax() {
-    scrollX = lerp(scrollX, targetScrollX, 0.08);
-    scrollContainer.style.transform = 'translateX(-' + scrollX + 'px)';
-
-    const progress = (scrollX / getScrollWidth()) * 100;
-    progressFill.style.width = progress + '%';
-    progressText.textContent = Math.round(progress) + '%';
-
-    parallaxLayers.forEach(layer => {
-      const elements = document.querySelectorAll(layer.selector);
-      elements.forEach(el => {
-        const rect = el.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const viewportCenter = window.innerWidth / 2;
-        const offset = (centerX - viewportCenter) * layer.speed;
-        el.style.transform = 'translateX(' + offset + 'px)';
-      });
-    });
-
-    requestAnimationFrame(updateParallax);
-  }
-  updateParallax();
-
-  // Data Grid Points
-  const dataGrid = document.getElementById('dataGrid');
-  for (let i = 0; i < 80; i++) {
-    const pt = document.createElement('div');
-    pt.className = 'data-point';
-    pt.style.left = Math.random() * 100 + '%';
-    pt.style.top = Math.random() * 100 + '%';
-    pt.style.animationDelay = Math.random() * 3 + 's';
-    pt.style.animationDuration = (2 + Math.random() * 2) + 's';
-    dataGrid.appendChild(pt);
-  }
-
-  // Network Canvas
-  const netCanvas = document.getElementById('networkCanvas');
-  const netCtx = netCanvas.getContext('2d');
-  let netW, netH;
-  const nodes = [];
-  const nodeCount = 40;
-
-  function resizeNet() {
-    netW = netCanvas.parentElement.offsetWidth;
-    netH = netCanvas.parentElement.offsetHeight;
-    netCanvas.width = netW;
-    netCanvas.height = netH;
-  }
-  resizeNet();
-  window.addEventListener('resize', resizeNet);
-
-  for (let i = 0; i < nodeCount; i++) {
-    nodes.push({
-      x: Math.random() * 400,
-      y: Math.random() * 400,
-      vx: (Math.random() - 0.5) * 0.3,
-      vy: (Math.random() - 0.5) * 0.3,
-      r: 1.5 + Math.random() * 2
-    });
-  }
-
-  function drawNetwork() {
-    netCtx.clearRect(0, 0, netW, netH);
-    nodes.forEach(n => {
-      n.x += n.vx;
-      n.y += n.vy;
-      if (n.x < 0 || n.x > netW) n.vx *= -1;
-      if (n.y < 0 || n.y > netH) n.vy *= -1;
-    });
-
-    netCtx.strokeStyle = 'rgba(0,0,0,0.06)';
-    netCtx.lineWidth = 0.5;
-    for (let i = 0; i < nodes.length; i++) {
-      for (let j = i + 1; j < nodes.length; j++) {
-        const dx = nodes[i].x - nodes[j].x;
-        const dy = nodes[i].y - nodes[j].y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < 100) {
-          netCtx.beginPath();
-          netCtx.moveTo(nodes[i].x, nodes[i].y);
-          netCtx.lineTo(nodes[j].x, nodes[j].y);
-          netCtx.globalAlpha = 1 - dist / 100;
-          netCtx.stroke();
-        }
-      }
-    }
-    netCtx.globalAlpha = 1;
-
-    nodes.forEach(n => {
-      netCtx.beginPath();
-      netCtx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
-      netCtx.fillStyle = 'rgba(0,0,0,0.2)';
-      netCtx.fill();
-    });
-
-    requestAnimationFrame(drawNetwork);
-  }
-  drawNetwork();
-
-  // Scroll Reveal
-  const reveals = document.querySelectorAll('.reveal');
-  function checkReveals() {
-    reveals.forEach(el => {
-      const rect = el.getBoundingClientRect();
-      if (rect.left < window.innerWidth * 0.8) {
-        el.classList.add('visible');
-      }
-    });
-  }
-  window.addEventListener('scroll', checkReveals);
-  checkReveals();
-</script>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="./donnees.js"></script>
 </body>
 </html>
